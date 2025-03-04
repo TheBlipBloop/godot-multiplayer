@@ -61,3 +61,32 @@ For exmaple, each "sync" propery would have its own send (to server AND from ser
 - MultiplayerSpawner exists. Need to look into how objects 'spawn' on the network. Looks like there may be some needed setup. TODO.
 - Unclear to what extent godot networking has been deployed in The Real World, may have some funky bullshit :|
 - Rumor has it that the MultiplayerSyncronizer is performing some sort of client-prediction server-validation? Unclear if thats the case looking at the source code. TODO
+
+
+
+
+# Arch A
+
+## Lobby
+Handles low level connections and disconnections.
+
+- Features
+	- Hosting 
+	- Connection
+	- Tracking connected clients
+	- Authenticating players connections
+	- Initializing players
+
+## Client
+Represents a single connected player in the lobby. Contains only game agnostic information
+
+- Features
+	- IP
+	- Ping
+	- IsLocalPlayer()
+
+## NetworkedNode
+Node that establishes a connection between Client and the Scene.
+? I'm not sure how godot handles things but these are componenty?
+
+For now, just holds a reference to the resepective client.
