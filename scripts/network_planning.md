@@ -61,6 +61,10 @@ For exmaple, each "sync" propery would have its own send (to server AND from ser
 - MultiplayerSpawner exists. Need to look into how objects 'spawn' on the network. Looks like there may be some needed setup. TODO.
 - Unclear to what extent godot networking has been deployed in The Real World, may have some funky bullshit :|
 - Rumor has it that the MultiplayerSyncronizer is performing some sort of client-prediction server-validation? Unclear if thats the case looking at the source code. TODO
+- Server → Client: @rpc("authority", "call_remote", "reliable")
+- Server → Every peer: @rpc("authority", "call_local", "reliable")
+- Client → Server: @rpc("any_peer", "call_remote", "reliable")
+- Authority Client → Server: @rpc("authority", "call_remote", "reliable")
 
 
 

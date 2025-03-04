@@ -2,7 +2,7 @@ using Godot;
 using System;
 
 [Serializable]
-public class Client
+public partial class Client : RefCounted
 {
 	/*********************************************************************************************/
 	/** Client Variables */
@@ -15,6 +15,9 @@ public class Client
 
 	// Set to true once this client is completely initialized (and authenticated).
 	protected bool initialized;
+
+	// Server time when this client was connected.
+	protected float connectTime;
 
 	/*********************************************************************************************/
 	/** Constructor */

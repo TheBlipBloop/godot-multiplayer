@@ -6,3 +6,4 @@
 
 [node name="Node" type="Node" parent="."]
 script = ExtResource("1_62it3")
+clients = Dictionary[int, Object]({})
