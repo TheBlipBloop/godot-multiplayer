@@ -67,6 +67,9 @@ For exmaple, each "sync" propery would have its own send (to server AND from ser
 
 # Arch A
 
+## ?
+- Shared interface for serializing objects for network transport
+
 ## Lobby
 Handles low level connections and disconnections.
 
