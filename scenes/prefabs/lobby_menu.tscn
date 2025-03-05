@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3 uid="uid://c5ywqhagg4clt"]
+
+[ext_resource type="Script" uid="uid://pn7mb6m3xnhi" path="res://scenes/prefabs/Menu.cs" id="1_rtcxu"]
+
+[node name="LobbyMenu" type="Control" node_paths=PackedStringArray("textEdit")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_rtcxu")
+textEdit = NodePath("MarginContainer/VBoxContainer/password")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="host" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "host"
+
+[node name="join" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "join"
+
+[node name="disconnect" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "disconnect"
+
+[node name="exit" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "exit"
+
+[node name="password" type="TextEdit" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "password"
+placeholder_text = "password"
+
+[connection signal="button_down" from="MarginContainer/VBoxContainer/host" to="." method="_on_host_button_down"]
+[connection signal="button_down" from="MarginContainer/VBoxContainer/join" to="." method="_on_join_button_down"]
+[connection signal="button_down" from="MarginContainer/VBoxContainer/disconnect" to="." method="_on_disconnect_button_down"]
+[connection signal="button_down" from="MarginContainer/VBoxContainer/exit" to="." method="_on_exit_button_down"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/password" to="." method="_on_password_text_changed"]

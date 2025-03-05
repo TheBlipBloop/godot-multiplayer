@@ -36,7 +36,10 @@ public partial class Lobby : Node
 
 	// Max number of connections allowed in this lobby.
 	[Export]
-	protected int maxConnections = 32;
+	protected int maxClients = 32;
+
+	[Export]
+	protected string password = "";
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -48,6 +51,58 @@ public partial class Lobby : Node
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+	}
+
+
+
+	/*********************************************************************************************/
+	/** Lobby */
+
+	// Starts server -- no clients
+	public virtual Error Host()
+	{
+		ENetMultiplayerPeer peer = new ENetMultiplayerPeer();
+		Error error = peer.CreateServer(port, maxClients);
+
+		if (error != Error.Ok)
+		{
+			return error;
+		}
+
+		Multiplayer.MultiplayerPeer = peer;
+
+		return Error.Ok;
+	}
+
+	public virtual Error Connect(string address)
+	{
+		ENetMultiplayerPeer peer = new ENetMultiplayerPeer();
+		Error error = peer.CreateClient(address, port);
+
+		if (error != Error.Ok)
+		{
+			return error;
+		}
+
+		Multiplayer.MultiplayerPeer = peer;
+
+		return Error.Ok;
+	}
+
+	public virtual void Disconnect()
+	{
+		Multiplayer.MultiplayerPeer.Close();
+	}
+
+	public virtual void SetPassword(string newPassword)
+	{
+		// Cannot change password while running!
+		// if (Multiplayer.MultiplayerPeer)
+		{
+			// return;
+		}
+		GD.Print(newPassword);
+		password = newPassword;
 	}
 
 	/*********************************************************************************************/
@@ -64,6 +119,8 @@ public partial class Lobby : Node
 
 	protected virtual void OnClientConnected(long clientID)
 	{
+		GD.Print("Client connected!");
+
 		// Called on existing clients AND the server
 		// When a client connects to our server, we want to send a message to the client to get it all
 		// set up!
@@ -72,17 +129,22 @@ public partial class Lobby : Node
 			return;
 		}
 
+		GD.Print("Client connected (on server side)");
+
 		// Server asks client to 
 		// RpcId(clientID, MethodName.ClientRPC_OnClientConnected);
 	}
 
 	protected virtual void OnClientDisconnected(long clientID)
 	{
-		throw new NotImplementedException("TODO");
+		GD.Print("Client (" + clientID.ToString() + ") disconnected!");
+		// throw new NotImplementedException("TODO");
 	}
 
 	protected virtual void OnConnectionSucceed()
 	{
+		GD.Print("Client connection success!");
+
 		// Once we've established connection to server, authenticate this client!
 		AuthenticateClient();
 	}
@@ -90,14 +152,16 @@ public partial class Lobby : Node
 	protected virtual void OnConnectionFail()
 	{
 		// Called on clients only!
-
-		throw new NotImplementedException("TODO");
+		GD.Print("Client connection failed!");
+		Multiplayer.MultiplayerPeer = null;
+		// throw new NotImplementedException("TODO");
 	}
 
 	protected virtual void OnServerDisconnected()
 	{
 		// Called on clients only!
-		throw new NotImplementedException("TODO");
+		Multiplayer.MultiplayerPeer = null;
+		// throw new NotImplementedException("TODO");
 	}
 
 
@@ -106,35 +170,23 @@ public partial class Lobby : Node
 
 	protected uint GetAuthenticationHash()
 	{
-		return version.Hash();
+		return (version + password).Hash();
 	}
 
 	protected virtual void AuthenticateClient()
 	{
 		// Send authentication information to the server 
 
+		int clientId = Multiplayer.GetUniqueId();
 		uint clientAuthentication = GetAuthenticationHash();
 
-		RpcId(1, MethodName.Command_AuthenticateNewClient, clientAuthentication);
+		GD.Print("Generated hash : " + clientAuthentication.ToString());
+
+		RpcId(1, MethodName.Command_AuthenticateNewClient, clientId, clientAuthentication);
 	}
 
 	/*********************************************************************************************/
 	/** RPC */
-
-
-	// RPC from server to clients asking clients to begin authentication
-	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void ClientRPC_OnClientConnected(long clientID, string ip)
-	{
-		uint clientAuthHash = GetAuthenticationHash();
-
-		// TODO : Fetch password and combine with the clientAuthHash here. (Or have as part of GetAuthHash())?
-
-		// This might not be the correct ID, validate!
-		int clientId = Multiplayer.GetRemoteSenderId();
-
-		RpcId(0, MethodName.Command_AuthenticateNewClient, clientAuthHash);
-	}
 
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void Command_AuthenticateNewClient(int clientID, uint clientAuth)
@@ -142,16 +194,20 @@ public partial class Lobby : Node
 		uint expectedAuthHash = GetAuthenticationHash();
 		bool clientAuthenticated = clientAuth == expectedAuthHash;
 
+		GD.Print("Expected hash : " + expectedAuthHash.ToString());
+		GD.Print("Client hash : " + clientAuth.ToString());
+
+
 		if (clientAuthenticated)
 		{
-
+			GD.Print("Client validated!");
 		}
 		else
 		{
+			GD.Print("Client fucking SUCKS!");
 			// bing bong fuck your life
 			Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
 		}
-
 	}
 
 

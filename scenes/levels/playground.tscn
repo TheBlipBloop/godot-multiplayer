@@ -1,9 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://dohsyq8q6amsn"]
+[gd_scene load_steps=3 format=3 uid="uid://dohsyq8q6amsn"]
 
 [ext_resource type="Script" uid="uid://dcm5jeu2yntyw" path="res://scripts/Lobby.cs" id="1_62it3"]
+[ext_resource type="PackedScene" uid="uid://c5ywqhagg4clt" path="res://scenes/prefabs/lobby_menu.tscn" id="2_n6048"]
 
 [node name="playground" type="Node2D"]
 
-[node name="Node" type="Node" parent="."]
+[node name="Lobby" type="Node" parent="."]
 script = ExtResource("1_62it3")
-clients = Dictionary[int, Object]({})
+
+[node name="LobbyMenu" parent="." node_paths=PackedStringArray("lobby") instance=ExtResource("2_n6048")]
+offset_right = 1152.0
+offset_bottom = 512.0
+lobby = NodePath("../Lobby")
