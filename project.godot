@@ -15,6 +15,11 @@ run/main_scene="uid://dohsyq8q6amsn"
 config/features=PackedStringArray("4.4", "C#", "GL Compatibility")
 config/icon="res://assets/icon.svg"
 
+[display]
+
+window/size/viewport_width=480
+window/size/viewport_height=320
+
 [dotnet]
 
 project/assembly_name="godot-multiplayer"

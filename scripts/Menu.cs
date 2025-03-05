@@ -25,9 +25,7 @@ public partial class Menu : Control
 
 	public void _on_host_button_down()
 	{
-		GD.Print("HOST BUTTON!");
-
-		Error e = lobby.Host();
+		Error e = lobby.Host("127.0.0.1");
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -36,14 +34,11 @@ public partial class Menu : Control
 
 	public void _on_join_button_down()
 	{
-		GD.Print("JOIN BUTTON!");
-
 		Error e = lobby.Connect("127.0.0.1");
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
 		}
-
 	}
 
 	public void _on_exit_button_down()
@@ -68,10 +63,5 @@ public partial class Menu : Control
 	private void Exit()
 	{
 		GetTree().Quit(0);
-	}
-
-	private void Host()
-	{
-		// lobby
 	}
 }

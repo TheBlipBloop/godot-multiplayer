@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://c5ywqhagg4clt"]
 
-[ext_resource type="Script" uid="uid://pn7mb6m3xnhi" path="res://scenes/prefabs/Menu.cs" id="1_rtcxu"]
+[ext_resource type="Script" uid="uid://pn7mb6m3xnhi" path="res://scripts/Menu.cs" id="1_rtcxu"]
 
 [node name="LobbyMenu" type="Control" node_paths=PackedStringArray("textEdit")]
 layout_mode = 3

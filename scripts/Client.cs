@@ -9,13 +9,16 @@ public partial class Client : RefCounted, IBlittable
 
 	// IP string, IPv4 / IPv6
 	// TODO : maybe we don't evne care about this, save for maybe like IP bans? For what those are worth
+	[Export]
 	protected string ip;
 
 	// Unique network ID for this client
+	[Export]
 	protected int networkID;
 
 	// Server time when this client was connected.
 	// TODO : Must have unified server time for this to make sense, which is silly but fun!
+	[Export]
 	protected float connectTime;
 
 	/*********************************************************************************************/

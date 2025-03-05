@@ -9,6 +9,6 @@
 script = ExtResource("1_62it3")
 
 [node name="LobbyMenu" parent="." node_paths=PackedStringArray("lobby") instance=ExtResource("2_n6048")]
-offset_right = 1152.0
-offset_bottom = 512.0
+offset_right = 481.0
+offset_bottom = 317.0
 lobby = NodePath("../Lobby")

@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 
 public partial class Lobby : Node
@@ -38,8 +39,13 @@ public partial class Lobby : Node
 	[Export]
 	protected int maxClients = 32;
 
+	// Password used when hosting / connecting to servers.
 	[Export]
 	protected string password = "";
+
+	[Export]
+	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
+
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -51,18 +57,22 @@ public partial class Lobby : Node
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		debug_clients.Clear();
+		foreach (var item in clients.Keys)
+		{
+			debug_clients.Add(item, clients[item]);
+		}
 	}
-
-
 
 	/*********************************************************************************************/
 	/** Lobby */
 
 	// Starts server -- no clients
-	public virtual Error Host()
+	public virtual Error Host(string bindIP)
 	{
 		ENetMultiplayerPeer peer = new ENetMultiplayerPeer();
 		Error error = peer.CreateServer(port, maxClients);
+		peer.SetBindIP(bindIP);
 
 		if (error != Error.Ok)
 		{
@@ -70,6 +80,7 @@ public partial class Lobby : Node
 		}
 
 		Multiplayer.MultiplayerPeer = peer;
+		GD.Print(String.Format("Hosting server @ {0}:{1}.", bindIP, port));
 
 		return Error.Ok;
 	}
@@ -86,6 +97,8 @@ public partial class Lobby : Node
 
 		Multiplayer.MultiplayerPeer = peer;
 
+		GD.Print(String.Format("Connected to server @ {0}:{1}.", address, port));
+
 		return Error.Ok;
 	}
 
@@ -96,12 +109,6 @@ public partial class Lobby : Node
 
 	public virtual void SetPassword(string newPassword)
 	{
-		// Cannot change password while running!
-		// if (Multiplayer.MultiplayerPeer)
-		{
-			// return;
-		}
-		GD.Print(newPassword);
 		password = newPassword;
 	}
 
@@ -119,35 +126,31 @@ public partial class Lobby : Node
 
 	protected virtual void OnPeerConnected(long clientID)
 	{
-		// GD.Print("Client connected!");
-
 		// Called on existing clients AND the server
 		// When a client connects to our server, we want to send a message to the client to get it all
 		// set up!
-		if (Multiplayer.IsServer()) // TODO : FIXME : this server indicator isn't working 
+		if (Multiplayer.IsServer())
 		{
 			return;
 		}
 
-		GD.Print("Client (" + clientID.ToString() + ") connected!");
+		GD.Print(String.Format("Server: Client connected ({0}).", clientID));
 	}
 
 	protected virtual void OnPeerDisconnected(long clientID)
 	{
-		if (Multiplayer.IsServer()) // TODO : FIXME : this server indicator isn't working 
+		if (Multiplayer.IsServer())
 		{
 			return;
 		}
 
 		UnregisterClient((int)clientID);
-		GD.Print("Client (" + clientID.ToString() + ") disconnected!");
-		// throw new NotImplementedException("TODO");
+		GD.Print(String.Format("Server: Client disconnected ({0}).", clientID));
 	}
 
 	protected virtual void OnConnectionSucceed()
 	{
 		// Called on clients only!
-		GD.Print("Client connection established, validating!");
 
 		// Once we've established connection to server, authenticate this client!
 		AuthenticateClient();
@@ -179,10 +182,10 @@ public partial class Lobby : Node
 	{
 		// Send authentication information to the server 
 
-		int clientId = Multiplayer.GetUniqueId();
+		int clientID = Multiplayer.GetUniqueId();
 		uint clientAuthentication = GetAuthenticationHash();
 
-		RpcId(1, MethodName.Command_AuthenticateNewClient, clientId, clientAuthentication);
+		RpcId(1, MethodName.Command_AuthenticateNewClient, clientID, clientAuthentication);
 	}
 
 	/*********************************************************************************************/
@@ -194,19 +197,14 @@ public partial class Lobby : Node
 		uint expectedAuthHash = GetAuthenticationHash();
 		bool clientAuthenticated = clientAuth == expectedAuthHash;
 
-		GD.Print("Expected hash : " + expectedAuthHash.ToString());
-		GD.Print("Client hash : " + clientAuth.ToString());
-
-
 		if (clientAuthenticated)
 		{
-			GD.Print("Client (" + clientID.ToString() + ") validated!");
-
+			GD.Print(String.Format("Server: Validated client : ({0}).", clientID));
 			RegisterClient(clientID);
 		}
 		else
 		{
-			GD.Print("Client (" + clientID.ToString() + ") fucking SUCKS!");
+			GD.Print(String.Format("Server: Failed to validate client : ({0}). Disconnecting from server.", clientID));
 			Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
 		}
 	}

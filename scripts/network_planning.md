@@ -65,7 +65,8 @@ For exmaple, each "sync" propery would have its own send (to server AND from ser
 - Server → Every peer: @rpc("authority", "call_local", "reliable")
 - Client → Server: @rpc("any_peer", "call_remote", "reliable")
 - Authority Client → Server: @rpc("authority", "call_remote", "reliable")
-
+- The unique ID is not assigned sequntially, its just a random number (host is always 1!)
+- Multiplayer State is determined by a parent root node of a scene, it might be possible to load a Client and Server scene under the same node?
 
 
 
