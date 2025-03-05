@@ -24,7 +24,7 @@ public partial class Lobby : Node
 	/** Lobby */
 
 	// Mapping of unique ID's to client information.
-	protected Dictionary<long, Client> clients = new Dictionary<long, Client>();
+	protected Dictionary<int, Client> clients = new Dictionary<int, Client>();
 
 	// Version string used to validate connections from incoming clients.
 	[Export]
@@ -124,7 +124,7 @@ public partial class Lobby : Node
 		// Called on existing clients AND the server
 		// When a client connects to our server, we want to send a message to the client to get it all
 		// set up!
-		if (Multiplayer.IsServer())
+		if (Multiplayer.IsServer()) // TODO : FIXME : this server indicator isn't working 
 		{
 			return;
 		}
@@ -134,11 +134,12 @@ public partial class Lobby : Node
 
 	protected virtual void OnPeerDisconnected(long clientID)
 	{
-		if (Multiplayer.IsServer())
+		if (Multiplayer.IsServer()) // TODO : FIXME : this server indicator isn't working 
 		{
 			return;
 		}
 
+		UnregisterClient((int)clientID);
 		GD.Print("Client (" + clientID.ToString() + ") disconnected!");
 		// throw new NotImplementedException("TODO");
 	}
@@ -200,6 +201,8 @@ public partial class Lobby : Node
 		if (clientAuthenticated)
 		{
 			GD.Print("Client (" + clientID.ToString() + ") validated!");
+
+			RegisterClient(clientID);
 		}
 		else
 		{
@@ -211,9 +214,25 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Registrations */
 
-	protected void RegisterClient()
+	protected void RegisterClient(int clientID)
 	{
+		if (clients.ContainsKey(clientID))
+		{
+			throw new Exception("Attempted to add client already in the client list. Client ID : " + clientID.ToString());
+		}
 
+		Client newClient = new Client(clientID);
+		clients.Add(clientID, newClient);
+	}
+
+	protected void UnregisterClient(int clientID)
+	{
+		if (!clients.ContainsKey(clientID))
+		{
+			throw new Exception("Attempted to remove client that is not in the client list. Client ID : " + clientID.ToString());
+		}
+
+		clients.Remove(clientID);
 	}
 
 }

@@ -8,6 +8,7 @@ public partial class Client : RefCounted, IBlittable
 	/** Client Variables */
 
 	// IP string, IPv4 / IPv6
+	// TODO : maybe we don't evne care about this, save for maybe like IP bans? For what those are worth
 	protected string ip;
 
 	// Unique network ID for this client
@@ -20,9 +21,8 @@ public partial class Client : RefCounted, IBlittable
 	/*********************************************************************************************/
 	/** Constructor */
 
-	public Client(string _ip, int _networkID)
+	public Client(int _networkID)
 	{
-		ip = _ip;
 		networkID = _networkID;
 	}
 
@@ -55,9 +55,9 @@ public partial class Client : RefCounted, IBlittable
 	public Object fromBlittable(Object[] data)
 	{
 		ip = (string)data[0];
-		networkID = (int)data[1];
+		// networkID = (int)data[1];
 
-		return new Client(ip, networkID);
+		return new Client(networkID);
 	}
 
 }
