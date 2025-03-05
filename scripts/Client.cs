@@ -2,7 +2,7 @@ using Godot;
 using System;
 
 [Serializable]
-public partial class Client : RefCounted
+public partial class Client : RefCounted, IBlittable
 {
 	/*********************************************************************************************/
 	/** Client Variables */
@@ -13,10 +13,8 @@ public partial class Client : RefCounted
 	// Unique network ID for this client
 	protected int networkID;
 
-	// Set to true once this client is completely initialized (and authenticated).
-	protected bool initialized;
-
 	// Server time when this client was connected.
+	// TODO : Must have unified server time for this to make sense, which is silly but fun!
 	protected float connectTime;
 
 	/*********************************************************************************************/
@@ -26,7 +24,6 @@ public partial class Client : RefCounted
 	{
 		ip = _ip;
 		networkID = _networkID;
-		initialized = false;
 	}
 
 	/*********************************************************************************************/
@@ -42,8 +39,25 @@ public partial class Client : RefCounted
 		return networkID;
 	}
 
-	public bool IsInitialized()
+	/*********************************************************************************************/
+	/** Blittable */
+
+	public Object[] ToBlittable()
 	{
-		return initialized;
+		Object[] objects = new Object[2];
+
+		objects[0] = ip;
+		objects[1] = networkID;
+
+		return objects;
 	}
+
+	public Object fromBlittable(Object[] data)
+	{
+		ip = (string)data[0];
+		networkID = (int)data[1];
+
+		return new Client(ip, networkID);
+	}
+
 }

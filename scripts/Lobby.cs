@@ -110,16 +110,16 @@ public partial class Lobby : Node
 
 	private void InitializeNetworkDelegates()
 	{
-		Multiplayer.PeerConnected += OnClientConnected;
-		Multiplayer.PeerDisconnected += OnClientDisconnected;
+		Multiplayer.PeerConnected += OnPeerConnected;
+		Multiplayer.PeerDisconnected += OnPeerDisconnected;
 		Multiplayer.ConnectedToServer += OnConnectionSucceed;
 		Multiplayer.ConnectionFailed += OnConnectionFail;
-		Multiplayer.ServerDisconnected += OnServerDisconnected;
+		Multiplayer.ServerDisconnected += OnDisconnect;
 	}
 
-	protected virtual void OnClientConnected(long clientID)
+	protected virtual void OnPeerConnected(long clientID)
 	{
-		GD.Print("Client connected!");
+		// GD.Print("Client connected!");
 
 		// Called on existing clients AND the server
 		// When a client connects to our server, we want to send a message to the client to get it all
@@ -129,21 +129,24 @@ public partial class Lobby : Node
 			return;
 		}
 
-		GD.Print("Client connected (on server side)");
-
-		// Server asks client to 
-		// RpcId(clientID, MethodName.ClientRPC_OnClientConnected);
+		GD.Print("Client (" + clientID.ToString() + ") connected!");
 	}
 
-	protected virtual void OnClientDisconnected(long clientID)
+	protected virtual void OnPeerDisconnected(long clientID)
 	{
+		if (Multiplayer.IsServer())
+		{
+			return;
+		}
+
 		GD.Print("Client (" + clientID.ToString() + ") disconnected!");
 		// throw new NotImplementedException("TODO");
 	}
 
 	protected virtual void OnConnectionSucceed()
 	{
-		GD.Print("Client connection success!");
+		// Called on clients only!
+		GD.Print("Client connection established, validating!");
 
 		// Once we've established connection to server, authenticate this client!
 		AuthenticateClient();
@@ -154,14 +157,12 @@ public partial class Lobby : Node
 		// Called on clients only!
 		GD.Print("Client connection failed!");
 		Multiplayer.MultiplayerPeer = null;
-		// throw new NotImplementedException("TODO");
 	}
 
-	protected virtual void OnServerDisconnected()
+	protected virtual void OnDisconnect()
 	{
 		// Called on clients only!
 		Multiplayer.MultiplayerPeer = null;
-		// throw new NotImplementedException("TODO");
 	}
 
 
@@ -179,8 +180,6 @@ public partial class Lobby : Node
 
 		int clientId = Multiplayer.GetUniqueId();
 		uint clientAuthentication = GetAuthenticationHash();
-
-		GD.Print("Generated hash : " + clientAuthentication.ToString());
 
 		RpcId(1, MethodName.Command_AuthenticateNewClient, clientId, clientAuthentication);
 	}
@@ -200,15 +199,21 @@ public partial class Lobby : Node
 
 		if (clientAuthenticated)
 		{
-			GD.Print("Client validated!");
+			GD.Print("Client (" + clientID.ToString() + ") validated!");
 		}
 		else
 		{
-			GD.Print("Client fucking SUCKS!");
-			// bing bong fuck your life
+			GD.Print("Client (" + clientID.ToString() + ") fucking SUCKS!");
 			Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
 		}
 	}
 
+	/*********************************************************************************************/
+	/** Registrations */
+
+	protected void RegisterClient()
+	{
+
+	}
 
 }
