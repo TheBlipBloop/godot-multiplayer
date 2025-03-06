@@ -9,8 +9,10 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Globals */
 
-	protected static Lobby instance;
+	// Lobby singleton.
+	private static Lobby instance;
 
+	// Returns the current lobby singleton.
 	public static Lobby GetLobbyInstance()
 	{
 		return instance;
@@ -43,15 +45,19 @@ public partial class Lobby : Node
 	[Export]
 	protected string password = "";
 
+	// Time in seconds that server must receive authentication info from clients before kicking.
+	protected float maxAuthenticationTime = 1.0f;
+
 	[Export]
 	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
-
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		SetLobbyInstance(this);
+		Multiplayer.MultiplayerPeer = null;
 		InitializeNetworkDelegates();
+
+		SetLobbyInstance(this);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -70,6 +76,11 @@ public partial class Lobby : Node
 	// Starts server -- no clients
 	public virtual Error Host(string bindIP)
 	{
+		if (Multiplayer.MultiplayerPeer != null)
+		{
+			return Error.AlreadyExists;
+		}
+
 		ENetMultiplayerPeer peer = new ENetMultiplayerPeer();
 		Error error = peer.CreateServer(port, maxClients);
 		peer.SetBindIP(bindIP);
@@ -87,6 +98,11 @@ public partial class Lobby : Node
 
 	public virtual Error Connect(string address)
 	{
+		if (Multiplayer.MultiplayerPeer != null)
+		{
+			return Error.AlreadyExists;
+		}
+
 		ENetMultiplayerPeer peer = new ENetMultiplayerPeer();
 		Error error = peer.CreateClient(address, port);
 
@@ -97,14 +113,22 @@ public partial class Lobby : Node
 
 		Multiplayer.MultiplayerPeer = peer;
 
-		GD.Print(String.Format("Connected to server @ {0}:{1}.", address, port));
+		GD.Print(String.Format("Connecting to server @ {0}:{1}.", address, port));
 
 		return Error.Ok;
 	}
 
-	public virtual void Disconnect()
+	public virtual Error Disconnect()
 	{
+		if (Multiplayer.MultiplayerPeer == null)
+		{
+			return Error.DoesNotExist;
+		}
+
 		Multiplayer.MultiplayerPeer.Close();
+		Multiplayer.MultiplayerPeer = null;
+
+		return Error.Ok;
 	}
 
 	public virtual void SetPassword(string newPassword)
@@ -129,7 +153,7 @@ public partial class Lobby : Node
 		// Called on existing clients AND the server
 		// When a client connects to our server, we want to send a message to the client to get it all
 		// set up!
-		if (Multiplayer.IsServer())
+		if (!Multiplayer.IsServer())
 		{
 			return;
 		}
@@ -139,7 +163,7 @@ public partial class Lobby : Node
 
 	protected virtual void OnPeerDisconnected(long clientID)
 	{
-		if (Multiplayer.IsServer())
+		if (!Multiplayer.IsServer())
 		{
 			return;
 		}
@@ -151,6 +175,7 @@ public partial class Lobby : Node
 	protected virtual void OnConnectionSucceed()
 	{
 		// Called on clients only!
+		GD.Print(String.Format("Client: Connection established."));
 
 		// Once we've established connection to server, authenticate this client!
 		AuthenticateClient();
@@ -161,12 +186,15 @@ public partial class Lobby : Node
 		// Called on clients only!
 		GD.Print("Client connection failed!");
 		Multiplayer.MultiplayerPeer = null;
+		clients.Clear();
 	}
 
 	protected virtual void OnDisconnect()
 	{
 		// Called on clients only!
+		GD.Print(String.Format("Client: Disconnected."));
 		Multiplayer.MultiplayerPeer = null;
+		clients.Clear();
 	}
 
 
@@ -182,6 +210,8 @@ public partial class Lobby : Node
 	{
 		// Send authentication information to the server 
 
+		// TODO : Must disconnect client from the server if they don't authenticate within a certain timeframe upon joining.
+
 		int clientID = Multiplayer.GetUniqueId();
 		uint clientAuthentication = GetAuthenticationHash();
 
@@ -191,6 +221,7 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** RPC */
 
+	// Sent from clients to the server on initial connection
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void Command_AuthenticateNewClient(int clientID, uint clientAuth)
 	{
@@ -201,12 +232,25 @@ public partial class Lobby : Node
 		{
 			GD.Print(String.Format("Server: Validated client : ({0}).", clientID));
 			RegisterClient(clientID);
+
+			// Once the client is validated on the server we need to sync the client list to all players.
+			// Ideally, when a new player joins they recieve the latest version of the client list & we just send changes in the list
+			// Also this wouldn't work if unordered!!!
+			// That in mind, should we also track client ready state?
 		}
 		else
 		{
 			GD.Print(String.Format("Server: Failed to validate client : ({0}). Disconnecting from server.", clientID));
 			Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
 		}
+	}
+
+	// 
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RPC_SyncClientList()
+	{
+
+
 	}
 
 	/*********************************************************************************************/
