@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 
 public partial class Lobby : Node
 {
@@ -232,7 +233,6 @@ public partial class Lobby : Node
 		{
 			GD.Print(String.Format("Server: Validated client : ({0}).", clientID));
 			RegisterClient(clientID);
-
 			// Once the client is validated on the server we need to sync the client list to all players.
 			// Ideally, when a new player joins they recieve the latest version of the client list & we just send changes in the list
 			// Also this wouldn't work if unordered!!!
@@ -245,16 +245,41 @@ public partial class Lobby : Node
 		}
 	}
 
-	// 
+	// Sends set of clients to all clients in the following format:
+	// [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RPC_SyncClientList()
+	private void RPC_SyncClientList(int[] clientData)
 	{
+		clients.Clear();
+		for (int i = 1; i < clientData[0]; i++)
+		{
+			int networkId = clientData[i];
+			Client client = new Client(networkId);
 
+			clients.Add(networkId, client);
+		}
 
 	}
 
+
 	/*********************************************************************************************/
 	/** Registrations */
+
+	private int[] SerializeClients(Dictionary<int, Client> serialize)
+	{
+		int count = serialize.Count;
+		int[] data = new int[count + 1];
+
+		int[] keys = serialize.Keys.ToArray<int>();
+
+		data[0] = count;
+		for (int i = 0; i < keys.Length; i++)
+		{
+			data[i + 1] = keys[i];
+		}
+
+		return data;
+	}
 
 	protected void RegisterClient(int clientID)
 	{
@@ -265,6 +290,10 @@ public partial class Lobby : Node
 
 		Client newClient = new Client(clientID);
 		clients.Add(clientID, newClient);
+
+		// Sync client info
+		int[] data = SerializeClients(clients);
+		Rpc(MethodName.RPC_SyncClientList, data);
 	}
 
 	protected void UnregisterClient(int clientID)
@@ -275,6 +304,10 @@ public partial class Lobby : Node
 		}
 
 		clients.Remove(clientID);
+
+		// Sync client info
+		int[] data = SerializeClients(clients);
+		Rpc(MethodName.RPC_SyncClientList, data);
 	}
 
 }
