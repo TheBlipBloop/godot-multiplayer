@@ -1,12 +1,19 @@
 [gd_scene load_steps=3 format=3 uid="uid://dohsyq8q6amsn"]
 
 [ext_resource type="Script" uid="uid://dcm5jeu2yntyw" path="res://scripts/Lobby.cs" id="1_62it3"]
-[ext_resource type="PackedScene" path="res://scenes/prefabs/lobby_menu.tscn" id="2_n6048"]
+[ext_resource type="PackedScene" uid="uid://c5ywqhagg4clt" path="res://scenes/prefabs/lobby_menu.tscn" id="2_n6048"]
 
 [node name="playground" type="Node2D"]
 
-[node name="Lobby" type="Node" parent="."]
+[node name="Lobby" type="Node" parent="." node_paths=PackedStringArray("clientListDebugLabel")]
 script = ExtResource("1_62it3")
+clientListDebugLabel = NodePath("client_list")
+
+[node name="client_list" type="Label" parent="Lobby"]
+offset_top = 191.0
+offset_right = 481.0
+offset_bottom = 323.0
+text = "Clients"
 
 [node name="LobbyMenu" parent="." node_paths=PackedStringArray("lobby") instance=ExtResource("2_n6048")]
 offset_right = 481.0

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 public partial class Lobby : Node
 {
@@ -52,6 +53,13 @@ public partial class Lobby : Node
 	[Export]
 	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
 
+	// TODO
+	[Export]
+	protected SceneTree playerNode;
+
+	[Export]
+	protected Label clientListDebugLabel;
+
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -69,6 +77,21 @@ public partial class Lobby : Node
 		{
 			debug_clients.Add(item, clients[item]);
 		}
+
+		clientListDebugLabel.Text = GetClientListString();
+	}
+
+	private string GetClientListString()
+	{
+		StringBuilder stringBuilder = new StringBuilder();
+		int clientIndex = 0;
+		foreach (var item in clients.Keys)
+		{
+			stringBuilder.Append(String.Format("{0}.\tClient : {1}\n", clientIndex, item));
+			clientIndex++;
+		}
+
+		return stringBuilder.ToString();
 	}
 
 	/*********************************************************************************************/
@@ -127,7 +150,6 @@ public partial class Lobby : Node
 		}
 
 		Multiplayer.MultiplayerPeer.Close();
-		Multiplayer.MultiplayerPeer = null;
 
 		return Error.Ok;
 	}
@@ -186,14 +208,19 @@ public partial class Lobby : Node
 	{
 		// Called on clients only!
 		GD.Print("Client connection failed!");
-		Multiplayer.MultiplayerPeer = null;
-		clients.Clear();
+		Reset();
 	}
 
 	protected virtual void OnDisconnect()
 	{
 		// Called on clients only!
 		GD.Print(String.Format("Client: Disconnected."));
+		Reset();
+	}
+
+	// Reset lobby completely (clears clients, disconnects peer, etc)
+	private void Reset()
+	{
 		Multiplayer.MultiplayerPeer = null;
 		clients.Clear();
 	}
@@ -251,14 +278,13 @@ public partial class Lobby : Node
 	private void RPC_SyncClientList(int[] clientData)
 	{
 		clients.Clear();
-		for (int i = 1; i < clientData[0]; i++)
+		for (int i = 0; i < clientData[0]; i++)
 		{
-			int networkId = clientData[i];
+			int networkId = clientData[i + 1];
 			Client client = new Client(networkId);
 
 			clients.Add(networkId, client);
 		}
-
 	}
 
 
