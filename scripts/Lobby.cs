@@ -1,25 +1,36 @@
 using Godot;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
+/// <summary>
+/// Represents a multiplayer lobby.
+/// Handles hosting, client connection, authentication, and spawning player nodes.
+/// </summary> 
 public partial class Lobby : Node
 {
 	/*********************************************************************************************/
-	/** Globals */
+	/** Singlton */
 
 	// Lobby singleton.
 	private static Lobby instance;
 
-	// Returns the current lobby singleton.
+	/// <summary>
+	/// Gets the current lobby singleton.
+	/// </summary>
+	/// <returns>The current lobby singleton.</returns>
 	public static Lobby GetLobbyInstance()
 	{
 		return instance;
 	}
 
+	/// <summary>
+	/// Updates the current lobby singleton to @newLobbyInstance.
+	/// </summary>
+	/// <param name="newLobbyInstance"></param>
 	private void SetLobbyInstance(Lobby newLobbyInstance)
 	{
 		instance = newLobbyInstance;
@@ -182,6 +193,9 @@ public partial class Lobby : Node
 		}
 
 		GD.Print(String.Format("Server: Client connected ({0}).", clientID));
+
+		// Disconnect the new client after maxAuthenticationTime if they have failed to send authentication.
+		TryDisconnectInvalidClient(maxAuthenticationTime, (int)clientID);
 	}
 
 	protected virtual void OnPeerDisconnected(long clientID)
@@ -191,7 +205,12 @@ public partial class Lobby : Node
 			return;
 		}
 
-		UnregisterClient((int)clientID);
+		// Unregister the client if it was validated
+		if (IsClientValid((int)clientID))
+		{
+			UnregisterClient((int)clientID);
+		}
+
 		GD.Print(String.Format("Server: Client disconnected ({0}).", clientID));
 	}
 
@@ -229,21 +248,50 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Authentication */
 
-	protected uint GetAuthenticationHash()
+	protected virtual uint GetAuthenticationHash()
 	{
 		return (version + password).Hash();
 	}
 
-	protected virtual void AuthenticateClient()
+	private void AuthenticateClient()
 	{
 		// Send authentication information to the server 
-
-		// TODO : Must disconnect client from the server if they don't authenticate within a certain timeframe upon joining.
 
 		int clientID = Multiplayer.GetUniqueId();
 		uint clientAuthentication = GetAuthenticationHash();
 
 		RpcId(1, MethodName.Command_AuthenticateNewClient, clientID, clientAuthentication);
+	}
+
+	public bool IsClientValid(int clientID)
+	{
+		return clients.ContainsKey(clientID);
+	}
+
+	private async void TryDisconnectInvalidClient(float delay, int clientID)
+	{
+		await Task.Delay((int)(delay * 1000f));
+		TryDisconnectInvalidClient(clientID);
+	}
+
+	private void TryDisconnectInvalidClient(int clientID)
+	{
+		GD.Print(String.Format("Server: Ensuring client is valid {0}.", clientID));
+
+		// FIXME : This function will throw an error if the peer has already disconnected.
+		// TEST : Occures when client authenticates and then leaves before @maxAuthenticationTime elapses.
+
+		if (!IsClientValid(clientID))
+		{
+			DisconnectInvalidClient(clientID);
+		}
+	}
+
+	private void DisconnectInvalidClient(int clientID)
+	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to disconnect a client from another client.");
+		GD.Print(String.Format("Server: Failed to validate client : ({0}). Disconnecting from server.", clientID));
+		Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
 	}
 
 	/*********************************************************************************************/
@@ -253,6 +301,9 @@ public partial class Lobby : Node
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void Command_AuthenticateNewClient(int clientID, uint clientAuth)
 	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to authenticate a client on remote.");
+
+
 		uint expectedAuthHash = GetAuthenticationHash();
 		bool clientAuthenticated = clientAuth == expectedAuthHash;
 
@@ -260,15 +311,10 @@ public partial class Lobby : Node
 		{
 			GD.Print(String.Format("Server: Validated client : ({0}).", clientID));
 			RegisterClient(clientID);
-			// Once the client is validated on the server we need to sync the client list to all players.
-			// Ideally, when a new player joins they recieve the latest version of the client list & we just send changes in the list
-			// Also this wouldn't work if unordered!!!
-			// That in mind, should we also track client ready state?
 		}
 		else
 		{
-			GD.Print(String.Format("Server: Failed to validate client : ({0}). Disconnecting from server.", clientID));
-			Multiplayer.MultiplayerPeer.DisconnectPeer(clientID, false);
+			DisconnectInvalidClient(clientID);
 		}
 	}
 
@@ -277,6 +323,8 @@ public partial class Lobby : Node
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void RPC_SyncClientList(int[] clientData)
 	{
+		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: Client sync recieved by server.");
+
 		clients.Clear();
 		for (int i = 0; i < clientData[0]; i++)
 		{
@@ -309,6 +357,8 @@ public partial class Lobby : Node
 
 	protected void RegisterClient(int clientID)
 	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
+
 		if (clients.ContainsKey(clientID))
 		{
 			throw new Exception("Attempted to add client already in the client list. Client ID : " + clientID.ToString());
@@ -324,6 +374,8 @@ public partial class Lobby : Node
 
 	protected void UnregisterClient(int clientID)
 	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
+
 		if (!clients.ContainsKey(clientID))
 		{
 			throw new Exception("Attempted to remove client that is not in the client list. Client ID : " + clientID.ToString());
@@ -335,5 +387,4 @@ public partial class Lobby : Node
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
 	}
-
 }
