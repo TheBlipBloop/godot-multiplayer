@@ -19,6 +19,8 @@ public partial class Client : RefCounted, IBlittable
 	// Player node belonging to this client.
 	protected Node playerInstance;
 
+	public float debug_reg_time;
+
 	/*********************************************************************************************/
 	/** Constructor */
 
@@ -30,15 +32,23 @@ public partial class Client : RefCounted, IBlittable
 	/*********************************************************************************************/
 	/** Client Registration */
 
-	// public virtual void OnRegisterClient()
-	// {
-	// 	GD.Print("reg client");
-	// }
+	public virtual void OnRegisterClient()
+	{
+		// Spawn in your player character, etc
+		GD.Print("!!!reg client!!!");
+		debug_reg_time = (float)Time.GetTicksMsec() / 1000f;
+	}
 
-	// public virtual void OnUnregisterClient()
-	// {
-	// 	GD.Print("unreg client");
-	// }
+	public float DEBUG_GetLifetime()
+	{
+		return ((float)Time.GetTicksMsec() / 1000f) - debug_reg_time;
+	}
+
+	public virtual void OnUnregisterClient()
+	{
+		// Destroy your player character, etc
+		GD.Print("!!!unreg client!!!");
+	}
 
 	/*********************************************************************************************/
 	/** Getters / Setters */

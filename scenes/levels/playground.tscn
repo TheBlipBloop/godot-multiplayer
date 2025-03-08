@@ -6,10 +6,9 @@
 
 [node name="playground" type="Node2D"]
 
-[node name="Lobby" type="Node" parent="." node_paths=PackedStringArray("playerSpawner", "clientListDebugLabel")]
+[node name="Lobby" type="Node" parent="." node_paths=PackedStringArray("clientListDebugLabel")]
 script = ExtResource("1_62it3")
 playerScene = ExtResource("2_o8weq")
-playerSpawner = NodePath("")
 clientListDebugLabel = NodePath("client_list")
 
 [node name="client_list" type="Label" parent="Lobby"]

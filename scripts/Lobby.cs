@@ -76,8 +76,9 @@ public partial class Lobby : Node
 	public override void _Ready()
 	{
 		Multiplayer.MultiplayerPeer = null;
-		InitializeNetworkDelegates();
+		// ((SceneMultiplayer)MultiplayerApi).ServerRelay
 
+		InitializeNetworkDelegates();
 		SetLobbyInstance(this);
 	}
 
@@ -116,7 +117,7 @@ public partial class Lobby : Node
 		int clientIndex = 0;
 		foreach (var item in clients.Keys)
 		{
-			stringBuilder.Append(String.Format("{0}.\tClient : {1}\n", clientIndex, item));
+			stringBuilder.Append(String.Format("{0}.\tClient : {1}\t({2})\n", clientIndex, item, clients[item].DEBUG_GetLifetime()));
 			clientIndex++;
 		}
 
@@ -258,6 +259,15 @@ public partial class Lobby : Node
 	// Reset lobby completely (clears clients, disconnects peer, etc)
 	private void Reset()
 	{
+		// Generate list of all local clients.
+		int[] clientIDs = new int[clients.Count];
+		clients.Keys.CopyTo(clientIDs, 0);
+
+		// Unregister all local clients
+		for (int i = 0; i < clientIDs.Length; i++)
+		{
+			UnregisterLocalClient(clientIDs[i], ref clients);
+		}
 		Multiplayer.MultiplayerPeer = null;
 		clients.Clear();
 	}
@@ -345,14 +355,7 @@ public partial class Lobby : Node
 	{
 		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: Client sync recieved by server.");
 
-		clients.Clear();
-		for (int i = 0; i < clientData[0]; i++)
-		{
-			int networkId = clientData[i + 1];
-			Client client = new Client(networkId);
-
-			clients.Add(networkId, client);
-		}
+		UpdateClients(clientData);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -372,7 +375,7 @@ public partial class Lobby : Node
 	}
 
 	/*********************************************************************************************/
-	/** Client Registration */
+	/** Client Registration (server) */
 
 	protected void RegisterClient(int clientID)
 	{
@@ -383,10 +386,10 @@ public partial class Lobby : Node
 			throw new Exception("Attempted to add client already in the client list. Client ID : " + clientID.ToString());
 		}
 
-		Client newClient = new Client(clientID);
-		clients.Add(clientID, newClient);
+		// Register client to list
+		RegisterLocalClient(clientID, ref clients);
 
-		// Sync client info
+		// Sync info to remote peers
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
 		// Rpc(MethodName.RPC_SpawnPlayerForClient, clientID);
@@ -401,9 +404,10 @@ public partial class Lobby : Node
 			throw new Exception("Attempted to remove client that is not in the client list. Client ID : " + clientID.ToString());
 		}
 
-		clients.Remove(clientID);
+		// Remove client from list
+		UnregisterLocalClient(clientID, ref clients);
 
-		// Sync client info
+		// Sync info to remote peers
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
 	}
@@ -425,6 +429,66 @@ public partial class Lobby : Node
 
 		return data;
 	}
+
+
+	/*********************************************************************************************/
+	/** Client Registration (client) */
+
+	// [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
+	private void UpdateClients(int[] serverClientData)
+	{
+		int clientCount = serverClientData[0];
+		HashSet<int> remoteClientIDs = new HashSet<int>(clientCount);
+
+		for (int i = 1; i < clientCount + 1; i++)
+		{
+			int newClientID = serverClientData[i];
+			remoteClientIDs.Add(newClientID);
+
+			// If this client is not current in the local client list,
+			if (!clients.ContainsKey(newClientID))
+			{
+				// Add to local list
+				RegisterLocalClient(newClientID, ref clients);
+			}
+		}
+
+		// Generate list of all local clients.
+		int[] localClientIDs = new int[clients.Count];
+		clients.Keys.CopyTo(localClientIDs, 0);
+
+		// Remove any local clients that have been removed from the servers list,
+		for (int i = 0; i < localClientIDs.Length; i++)
+		{
+			// If the client has been removed from the server list,
+			if (!remoteClientIDs.Contains(localClientIDs[i]))
+			{
+				// Remove the client from local list 
+				UnregisterLocalClient(localClientIDs[i], ref clients);
+			}
+		}
+	}
+
+	protected virtual Client RegisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictonary)
+	{
+		Debug.Assert(!clientDictonary.ContainsKey(clientID), String.Format("Unable to regsiter local client {0}. Client already exists.", clientID));
+
+		Client newClient = new Client(clientID);
+
+		newClient.OnRegisterClient();
+		clientDictonary.Add(clientID, newClient);
+
+		return newClient;
+	}
+
+	protected virtual bool UnregisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictonary)
+	{
+		Debug.Assert(clientDictonary.ContainsKey(clientID), String.Format("Unable to unregsiter local client {0}. Client does not exist.", clientID));
+
+		clientDictonary[clientID].OnUnregisterClient();
+		return clientDictonary.Remove(clientID);
+	}
+
 
 	protected virtual void SpawnPlayerForClient(int clientID)
 	{
