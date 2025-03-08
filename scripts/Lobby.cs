@@ -61,15 +61,16 @@ public partial class Lobby : Node
 	// Time in seconds that server must receive authentication info from clients before kicking.
 	protected float maxAuthenticationTime = 1.0f;
 
+	// Player scene. Every client has one spawned player scene that they control.
 	[Export]
-	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
+	protected PackedScene playerScene;
 
-	// TODO
+	// TODO : Maybe use this? It seems like we can just do this manually and then users only need to configure one node 
 	[Export]
-	protected SceneTree playerNode;
+	protected MultiplayerSpawner playerSpawner;
 
-	[Export]
-	protected Label clientListDebugLabel;
+	/*********************************************************************************************/
+	/** Egnine Methods */
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -83,6 +84,23 @@ public partial class Lobby : Node
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		ProcessDebugging();
+	}
+
+	/*********************************************************************************************/
+	/** Debugging - Data */
+
+	[Export]
+	protected Label clientListDebugLabel;
+
+	[Export]
+	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
+
+	/*********************************************************************************************/
+	/** Debugging - Functions */
+
+	protected void ProcessDebugging()
+	{
 		debug_clients.Clear();
 		foreach (var item in clients.Keys)
 		{
@@ -92,7 +110,7 @@ public partial class Lobby : Node
 		clientListDebugLabel.Text = GetClientListString();
 	}
 
-	private string GetClientListString()
+	public string GetClientListString()
 	{
 		StringBuilder stringBuilder = new StringBuilder();
 		int clientIndex = 0;
@@ -108,7 +126,7 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
-	// Starts server -- no clients
+	// Starts server
 	public virtual Error Host(string bindIP)
 	{
 		if (Multiplayer.MultiplayerPeer != null)
@@ -246,7 +264,7 @@ public partial class Lobby : Node
 
 
 	/*********************************************************************************************/
-	/** Authentication */
+	/** Client Authentication */
 
 	protected virtual uint GetAuthenticationHash()
 	{
@@ -295,14 +313,13 @@ public partial class Lobby : Node
 	}
 
 	/*********************************************************************************************/
-	/** RPC */
+	/** RPC - Client => Server */
 
 	// Sent from clients to the server on initial connection
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void Command_AuthenticateNewClient(int clientID, uint clientAuth)
 	{
 		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to authenticate a client on remote.");
-
 
 		uint expectedAuthHash = GetAuthenticationHash();
 		bool clientAuthenticated = clientAuth == expectedAuthHash;
@@ -317,6 +334,9 @@ public partial class Lobby : Node
 			DisconnectInvalidClient(clientID);
 		}
 	}
+
+	/*********************************************************************************************/
+	/** RPC - Server => Client*/
 
 	// Sends set of clients to all clients in the following format:
 	// [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
@@ -335,25 +355,24 @@ public partial class Lobby : Node
 		}
 	}
 
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RPC_SpawnPlayerForClient(int clientID)
+	{
+		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: RPC_SpawnPlayerForClient recieved by server.");
+
+		SpawnPlayerForClient(clientID);
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RPC_DespawnPlayerForClient(int clientID)
+	{
+		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: RPC_DespawnPlayerForClient recieved by server.");
+
+		DespawnPlayerForClient(clientID);
+	}
 
 	/*********************************************************************************************/
-	/** Registrations */
-
-	private int[] SerializeClients(Dictionary<int, Client> serialize)
-	{
-		int count = serialize.Count;
-		int[] data = new int[count + 1];
-
-		int[] keys = serialize.Keys.ToArray<int>();
-
-		data[0] = count;
-		for (int i = 0; i < keys.Length; i++)
-		{
-			data[i + 1] = keys[i];
-		}
-
-		return data;
-	}
+	/** Client Registration */
 
 	protected void RegisterClient(int clientID)
 	{
@@ -370,6 +389,7 @@ public partial class Lobby : Node
 		// Sync client info
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
+		// Rpc(MethodName.RPC_SpawnPlayerForClient, clientID);
 	}
 
 	protected void UnregisterClient(int clientID)
@@ -386,5 +406,43 @@ public partial class Lobby : Node
 		// Sync client info
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
+	}
+
+	private int[] SerializeClients(Dictionary<int, Client> serialize)
+	{
+		// TODO : We might not need to send the first int as length of array, this is C# after all!
+
+		int count = serialize.Count;
+		int[] data = new int[count + 1];
+
+		int[] keys = serialize.Keys.ToArray<int>();
+
+		data[0] = count;
+		for (int i = 0; i < keys.Length; i++)
+		{
+			data[i + 1] = keys[i];
+		}
+
+		return data;
+	}
+
+	protected virtual void SpawnPlayerForClient(int clientID)
+	{
+		Debug.Assert(clients.ContainsKey(clientID), String.Format("Unable to spawn player for client {0}. Client does not exist.", clientID));
+
+		Node clientPlayerNode = playerScene.Instantiate();
+		clientPlayerNode.Name = String.Format("client ({0})", clientID);
+		AddChild(clientPlayerNode);
+		clientPlayerNode.SetMultiplayerAuthority(clientID);
+
+		clients[clientID].SetPlayer(clientPlayerNode);
+	}
+
+	protected virtual void DespawnPlayerForClient(int clientID)
+	{
+		Debug.Assert(clients.ContainsKey(clientID), String.Format("Unable to despawn player for client {0}. Client does not exist.", clientID));
+		Debug.Assert(clients[clientID].GetPlayer() != null, String.Format("Unable to despawn player for client {0}. Player node does not exist.", clientID));
+
+		clients[clientID].GetPlayer().QueueFree();
 	}
 }

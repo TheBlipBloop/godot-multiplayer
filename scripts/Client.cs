@@ -16,6 +16,9 @@ public partial class Client : RefCounted, IBlittable
 	[Export]
 	protected float connectTime;
 
+	// Player node belonging to this client.
+	protected Node playerInstance;
+
 	/*********************************************************************************************/
 	/** Constructor */
 
@@ -25,11 +28,34 @@ public partial class Client : RefCounted, IBlittable
 	}
 
 	/*********************************************************************************************/
+	/** Client Registration */
+
+	// public virtual void OnRegisterClient()
+	// {
+	// 	GD.Print("reg client");
+	// }
+
+	// public virtual void OnUnregisterClient()
+	// {
+	// 	GD.Print("unreg client");
+	// }
+
+	/*********************************************************************************************/
 	/** Getters / Setters */
+
+	public void SetPlayer(Node newPlayerInstance)
+	{
+		playerInstance = newPlayerInstance;
+	}
 
 	public int GetNetworkID()
 	{
 		return networkID;
+	}
+
+	public Node GetPlayer()
+	{
+		return playerInstance;
 	}
 
 	/*********************************************************************************************/
