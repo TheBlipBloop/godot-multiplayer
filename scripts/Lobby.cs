@@ -39,6 +39,8 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
+	[ExportGroup("Lobby Configuration")]
+
 	// Mapping of unique ID's to client information.
 	protected Dictionary<int, Client> clients = new Dictionary<int, Client>();
 
@@ -59,15 +61,12 @@ public partial class Lobby : Node
 	protected string password = "";
 
 	// Time in seconds that server must receive authentication info from clients before kicking.
+	[Export]
 	protected float maxAuthenticationTime = 1.0f;
 
 	// Player scene. Every client has one spawned player scene that they control.
 	[Export]
 	protected PackedScene playerScene;
-
-	// TODO : Maybe use this? It seems like we can just do this manually and then users only need to configure one node 
-	[Export]
-	protected MultiplayerSpawner playerSpawner;
 
 	/*********************************************************************************************/
 	/** Egnine Methods */
@@ -147,6 +146,8 @@ public partial class Lobby : Node
 		Multiplayer.MultiplayerPeer = peer;
 		GD.Print(String.Format("Hosting server @ {0}:{1}.", bindIP, port));
 
+		// EnableUPNP(port);
+
 		return Error.Ok;
 	}
 
@@ -180,6 +181,7 @@ public partial class Lobby : Node
 		}
 
 		Multiplayer.MultiplayerPeer.Close();
+		// DisableUPNP(port);
 
 		return Error.Ok;
 	}
@@ -187,6 +189,22 @@ public partial class Lobby : Node
 	public virtual void SetPassword(string newPassword)
 	{
 		password = newPassword;
+	}
+	/*********************************************************************************************/
+	/** UPNP */
+
+	private Upnp upnp;
+
+	protected void EnableUPNP(int port)
+	{
+		upnp = new Upnp();
+		upnp.Discover();
+		upnp.AddPortMapping(port);
+	}
+
+	protected void DisableUPNP(int port)
+	{
+		upnp.DeletePortMapping(port);
 	}
 
 	/*********************************************************************************************/
