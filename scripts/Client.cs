@@ -36,6 +36,8 @@ public partial class Client : RefCounted, IBlittable
 		playerInstance = playerPrefab.Instantiate<Node>();
 		playerInstance.SetMultiplayerAuthority(networkID);
 
+		playerInstance.Name = String.Format("client_{0}", networkID);
+
 		clientRoot.AddChild(playerInstance);
 	}
 

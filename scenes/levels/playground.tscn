@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dcm5jeu2yntyw" path="res://scripts/Lobby.cs" id="1_62it3"]
 [ext_resource type="PackedScene" uid="uid://c5ywqhagg4clt" path="res://scenes/prefabs/lobby_menu.tscn" id="2_n6048"]
-[ext_resource type="PackedScene" uid="uid://ck7p465jbsvgd" path="res://scenes/prefabs/player.tscn" id="2_o8weq"]
+[ext_resource type="PackedScene" uid="uid://bpo3sey3ddxkt" path="res://scenes/prefabs/demo_player.tscn" id="2_o8weq"]
 
 [node name="playground" type="Node2D"]
 
