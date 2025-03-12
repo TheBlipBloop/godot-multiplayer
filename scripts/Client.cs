@@ -1,6 +1,10 @@
 using Godot;
 using System;
 
+/// <summary>
+/// Clients are objects that represent an authenticated connection to the server.
+/// By default, each client spawns a player node which they have network authority over.
+/// </summary>
 [Serializable]
 public partial class Client : RefCounted, IBlittable
 {
@@ -30,7 +34,7 @@ public partial class Client : RefCounted, IBlittable
 	/*********************************************************************************************/
 	/** Client Registration */
 
-	public virtual void OnRegisterClient(Node clientRoot, PackedScene playerPrefab) // This kind of sucks
+	public virtual void OnRegisterClient(Node root, PackedScene playerPrefab)
 	{
 		// Spawn in your player character, etc
 		playerInstance = playerPrefab.Instantiate<Node>();
@@ -38,7 +42,7 @@ public partial class Client : RefCounted, IBlittable
 
 		playerInstance.Name = String.Format("client_{0}", networkID);
 
-		clientRoot.AddChild(playerInstance);
+		root.AddChild(playerInstance);
 	}
 
 	public virtual void OnUnregisterClient()
@@ -49,11 +53,6 @@ public partial class Client : RefCounted, IBlittable
 
 	/*********************************************************************************************/
 	/** Getters / Setters */
-
-	public void SetPlayer(Node newPlayerInstance)
-	{
-		playerInstance = newPlayerInstance;
-	}
 
 	public int GetNetworkID()
 	{
@@ -81,5 +80,4 @@ public partial class Client : RefCounted, IBlittable
 	{
 		return new Client(networkID);
 	}
-
 }

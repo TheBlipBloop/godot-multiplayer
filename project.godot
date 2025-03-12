@@ -28,3 +28,4 @@ project/assembly_name="godot-multiplayer"
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.897869, 0.798916, 0.75584, 1)

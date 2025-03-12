@@ -39,7 +39,7 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
-	[ExportGroup("Lobby Configuration")]
+	[ExportGroup("Lobby Configuration (Network)")]
 
 	// Mapping of unique ID's to client information.
 	protected Dictionary<int, Client> clients = new Dictionary<int, Client>();
@@ -64,12 +64,19 @@ public partial class Lobby : Node
 	[Export]
 	protected float maxAuthenticationTime = 1.0f;
 
+	[ExportGroup("Lobby Configuration (Scenes)")]
+
+	// Node under which all player nodes will be spawn. This node should be a child of the Lobby 
+	// node.If no node is specified, the lobby node will be used instead. 
+	[Export]
+	protected Node playerRoot;
+
 	// Player scene. Every client has one spawned player scene that they control.
 	[Export]
 	protected PackedScene playerScene;
 
 	/*********************************************************************************************/
-	/** Egnine Methods */
+	/** Engine Methods */
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -190,8 +197,9 @@ public partial class Lobby : Node
 	{
 		password = newPassword;
 	}
+
 	/*********************************************************************************************/
-	/** UPNP */
+	/** UPNP (WIP) */
 
 	private Upnp upnp;
 
@@ -376,22 +384,6 @@ public partial class Lobby : Node
 		UpdateClients(clientData);
 	}
 
-	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RPC_SpawnPlayerForClient(int clientID)
-	{
-		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: RPC_SpawnPlayerForClient recieved by server.");
-
-		SpawnPlayerForClient(clientID);
-	}
-
-	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RPC_DespawnPlayerForClient(int clientID)
-	{
-		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: RPC_DespawnPlayerForClient recieved by server.");
-
-		DespawnPlayerForClient(clientID);
-	}
-
 	/*********************************************************************************************/
 	/** Client Registration (server) */
 
@@ -486,44 +478,28 @@ public partial class Lobby : Node
 		}
 	}
 
-	protected virtual Client RegisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictonary)
+	protected virtual Client RegisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictionary)
 	{
-		Debug.Assert(!clientDictonary.ContainsKey(clientID), String.Format("Unable to regsiter local client {0}. Client already exists.", clientID));
+		Debug.Assert(!clientDictionary.ContainsKey(clientID), String.Format("Unable to register local client {0}. Client already exists.", clientID));
 
 		Client newClient = new Client(clientID);
 
-		newClient.OnRegisterClient(this, playerScene);
-		clientDictonary.Add(clientID, newClient);
+		newClient.OnRegisterClient(GetClientRoot(), playerScene);
+		clientDictionary.Add(clientID, newClient);
 
 		return newClient;
 	}
 
-	protected virtual bool UnregisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictonary)
+	protected virtual bool UnregisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictionary)
 	{
-		Debug.Assert(clientDictonary.ContainsKey(clientID), String.Format("Unable to unregsiter local client {0}. Client does not exist.", clientID));
+		Debug.Assert(clientDictionary.ContainsKey(clientID), String.Format("Unable to unregister local client {0}. Client does not exist.", clientID));
 
-		clientDictonary[clientID].OnUnregisterClient();
-		return clientDictonary.Remove(clientID);
+		clientDictionary[clientID].OnUnregisterClient();
+		return clientDictionary.Remove(clientID);
 	}
 
-
-	protected virtual void SpawnPlayerForClient(int clientID)
+	public Node GetClientRoot()
 	{
-		Debug.Assert(clients.ContainsKey(clientID), String.Format("Unable to spawn player for client {0}. Client does not exist.", clientID));
-
-		Node clientPlayerNode = playerScene.Instantiate();
-		clientPlayerNode.Name = String.Format("client ({0})", clientID);
-		AddChild(clientPlayerNode);
-		clientPlayerNode.SetMultiplayerAuthority(clientID);
-
-		clients[clientID].SetPlayer(clientPlayerNode);
-	}
-
-	protected virtual void DespawnPlayerForClient(int clientID)
-	{
-		Debug.Assert(clients.ContainsKey(clientID), String.Format("Unable to despawn player for client {0}. Client does not exist.", clientID));
-		Debug.Assert(clients[clientID].GetPlayer() != null, String.Format("Unable to despawn player for client {0}. Player node does not exist.", clientID));
-
-		clients[clientID].GetPlayer().QueueFree();
+		return playerRoot != null ? playerRoot : this;
 	}
 }
