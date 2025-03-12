@@ -19,8 +19,6 @@ public partial class Client : RefCounted, IBlittable
 	// Player node belonging to this client.
 	protected Node playerInstance;
 
-	public float debug_reg_time;
-
 	/*********************************************************************************************/
 	/** Constructor */
 
@@ -32,22 +30,19 @@ public partial class Client : RefCounted, IBlittable
 	/*********************************************************************************************/
 	/** Client Registration */
 
-	public virtual void OnRegisterClient()
+	public virtual void OnRegisterClient(Node clientRoot, PackedScene playerPrefab) // This kind of sucks
 	{
 		// Spawn in your player character, etc
-		GD.Print("!!!reg client!!!");
-		debug_reg_time = (float)Time.GetTicksMsec() / 1000f;
-	}
+		playerInstance = playerPrefab.Instantiate<Node>();
+		playerInstance.SetMultiplayerAuthority(networkID);
 
-	public float DEBUG_GetLifetime()
-	{
-		return ((float)Time.GetTicksMsec() / 1000f) - debug_reg_time;
+		clientRoot.AddChild(playerInstance);
 	}
 
 	public virtual void OnUnregisterClient()
 	{
 		// Destroy your player character, etc
-		GD.Print("!!!unreg client!!!");
+		playerInstance.QueueFree();
 	}
 
 	/*********************************************************************************************/

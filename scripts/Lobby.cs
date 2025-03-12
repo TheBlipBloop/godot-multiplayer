@@ -117,7 +117,7 @@ public partial class Lobby : Node
 		int clientIndex = 0;
 		foreach (var item in clients.Keys)
 		{
-			stringBuilder.Append(String.Format("{0}.\tClient : {1}\t({2})\n", clientIndex, item, clients[item].DEBUG_GetLifetime()));
+			stringBuilder.Append(String.Format("{0}.\tClient : {1}\n", clientIndex, item));
 			clientIndex++;
 		}
 
@@ -392,7 +392,6 @@ public partial class Lobby : Node
 		// Sync info to remote peers
 		int[] data = SerializeClients(clients);
 		Rpc(MethodName.RPC_SyncClientList, data);
-		// Rpc(MethodName.RPC_SpawnPlayerForClient, clientID);
 	}
 
 	protected void UnregisterClient(int clientID)
@@ -475,7 +474,7 @@ public partial class Lobby : Node
 
 		Client newClient = new Client(clientID);
 
-		newClient.OnRegisterClient();
+		newClient.OnRegisterClient(this, playerScene);
 		clientDictonary.Add(clientID, newClient);
 
 		return newClient;
