@@ -24,10 +24,15 @@ WIP.
 - [ ] Conform to Godot naming conventions!
 - [ ] Make sure lobby system plays nice with multi-scene setups
 - [ ] Player Spawn Point class? 
+- [ ] Cleanup client registration / registration code 
 - [ ] A better name for this project
-- [ ] Unit testing
+- [ ] Unit testing!!!!!
 
 
 # Things that would be fun to build to support this project
 - [ ] Asset validation library
 - [ ] C# Unit Testing Framework
+
+# Known Bugs
+So I don't forget to fix them!
+- If a client joins the server, fails to authenticate, and then leaves the server before being kicked, an error is thrown by the lobby as it attempts to remove an non-existent peer.
