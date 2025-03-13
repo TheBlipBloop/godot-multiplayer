@@ -1,60 +1,114 @@
-[gd_scene load_steps=2 format=3 uid="uid://c5ywqhagg4clt"]
+[gd_scene load_steps=3 format=3 uid="uid://c5ywqhagg4clt"]
 
 [ext_resource type="Script" uid="uid://pn7mb6m3xnhi" path="res://scripts/Menu.cs" id="1_rtcxu"]
 
-[node name="LobbyMenu" type="Control" node_paths=PackedStringArray("passwordTextEdit", "ipTextEdit")]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
+[sub_resource type="LabelSettings" id="LabelSettings_rtcxu"]
+font_color = Color(0, 0, 0, 1)
+
+[node name="LobbyMenu" type="CanvasLayer"]
 script = ExtResource("1_rtcxu")
-passwordTextEdit = NodePath("MarginContainer/VBoxContainer/password")
-ipTextEdit = NodePath("MarginContainer/VBoxContainer/ip")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -145.0
+offset_top = -68.0
+offset_right = 145.0
+offset_bottom = 68.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="host" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 layout_mode = 2
-text = "host"
+size_flags_vertical = 4
 
-[node name="join" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "join"
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
 
-[node name="disconnect" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
-text = "disconnect"
+text = "Server IP:"
+label_settings = SubResource("LabelSettings_rtcxu")
 
-[node name="exit" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="ip" type="LineEdit" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
-text = "exit"
-
-[node name="ip" type="TextEdit" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
+size_flags_horizontal = 4
 text = "127.0.0.1"
 placeholder_text = "127.0.0.1"
+alignment = 1
 
-[node name="password" type="TextEdit" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 48)
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Password:"
+label_settings = SubResource("LabelSettings_rtcxu")
+
+[node name="password" type="LineEdit" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 text = "password"
 placeholder_text = "password"
+alignment = 1
 
-[connection signal="button_down" from="MarginContainer/VBoxContainer/host" to="." method="_on_host_button_down"]
-[connection signal="button_down" from="MarginContainer/VBoxContainer/join" to="." method="_on_join_button_down"]
-[connection signal="button_down" from="MarginContainer/VBoxContainer/disconnect" to="." method="_on_disconnect_button_down"]
-[connection signal="button_down" from="MarginContainer/VBoxContainer/exit" to="." method="_on_exit_button_down"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.5
+theme_override_constants/separation = 90
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 10
+
+[node name="host" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Host
+"
+
+[node name="join" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Join"
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 2
+
+[node name="disconnect" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer2"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Disconnect"
+
+[node name="exit" type="Button" parent="VBoxContainer/HBoxContainer/VBoxContainer2"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Exit"
+
+[connection signal="button_down" from="VBoxContainer/HBoxContainer/VBoxContainer/host" to="." method="_on_host_button_down"]
+[connection signal="button_down" from="VBoxContainer/HBoxContainer/VBoxContainer/join" to="." method="_on_join_button_down"]
+[connection signal="button_down" from="VBoxContainer/HBoxContainer/VBoxContainer2/disconnect" to="." method="_on_disconnect_button_down"]
+[connection signal="button_down" from="VBoxContainer/HBoxContainer/VBoxContainer2/exit" to="." method="_on_exit_button_down"]
