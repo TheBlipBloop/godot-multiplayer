@@ -13,7 +13,7 @@ using System.Collections.Generic;
 public partial class Lobby : Node
 {
 	/*********************************************************************************************/
-	/** Singlton */
+	/** Singleton */
 
 	// Lobby singleton.
 	private static Lobby instance;
