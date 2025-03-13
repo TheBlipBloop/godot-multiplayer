@@ -15,6 +15,10 @@ run/main_scene="uid://dohsyq8q6amsn"
 config/features=PackedStringArray("4.4", "C#", "GL Compatibility")
 config/icon="res://assets/icon.svg"
 
+[autoload]
+
+Lobby="*res://scenes/prefabs/lobby.tscn"
+
 [display]
 
 window/size/viewport_width=480

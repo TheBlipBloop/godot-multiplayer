@@ -3,10 +3,6 @@ using System;
 
 public partial class Menu : Control
 {
-
-	[Export]
-	protected Lobby lobby;
-
 	[Export]
 	protected TextEdit passwordTextEdit;
 
@@ -23,7 +19,7 @@ public partial class Menu : Control
 	public override void _Ready()
 	{
 		password = passwordTextEdit.Text;
-		lobby.SetPassword(password);
+		Lobby.GetLobbyInstance().SetPassword(password);
 	}
 
 	/*********************************************************************************************/
@@ -31,7 +27,7 @@ public partial class Menu : Control
 
 	public void _on_host_button_down()
 	{
-		Error e = lobby.Host(ipTextEdit.Text);
+		Error e = Lobby.GetLobbyInstance().Host(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -40,7 +36,7 @@ public partial class Menu : Control
 
 	public void _on_join_button_down()
 	{
-		Error e = lobby.Connect(ipTextEdit.Text);
+		Error e = Lobby.GetLobbyInstance().Connect(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -54,7 +50,7 @@ public partial class Menu : Control
 
 	public void _on_disconnect_button_down()
 	{
-		lobby.Disconnect();
+		Lobby.GetLobbyInstance().Disconnect();
 	}
 
 	/*********************************************************************************************/

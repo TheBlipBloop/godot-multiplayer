@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://cdjo6xqp3diue"]
+
+[ext_resource type="Script" uid="uid://dcm5jeu2yntyw" path="res://scripts/Lobby.cs" id="1_uniae"]
+[ext_resource type="PackedScene" uid="uid://bpo3sey3ddxkt" path="res://scenes/prefabs/demo_player.tscn" id="2_sslvx"]
+
+[node name="Lobby" type="Node" node_paths=PackedStringArray("clientListDebugLabel")]
+script = ExtResource("1_uniae")
+playerScene = ExtResource("2_sslvx")
+clientListDebugLabel = NodePath("client_list")
+
+[node name="client_list" type="Label" parent="."]
+offset_top = 250.0
+offset_right = 481.0
+offset_bottom = 323.0
+text = "Clients"

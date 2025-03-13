@@ -15,6 +15,7 @@ WIP.
 - [ ] Custom [Server] and [Client] attributes with safety checks
 - [ ] Hybrid server-client hosting.
 - [ ] Track client latency.
+- [ ] Server scene Manager ()
 - [ ] Network time.
 - [ ] Demo with server authoritative movement + prediction / recon.
 - [ ] Methods for accessing client data from the lobby singleton.
@@ -27,6 +28,7 @@ WIP.
 - [ ] Cleanup client registration / registration code 
 - [ ] A better name for this project
 - [ ] Unit testing!!!!!
+- [ ] Handle late join players (e..g a player joins mid round, notify the server in some way that its time to send latest data).
 
 
 # Things that would be fun to build to support this project

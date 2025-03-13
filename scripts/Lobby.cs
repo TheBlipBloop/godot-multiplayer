@@ -75,6 +75,16 @@ public partial class Lobby : Node
 	[Export]
 	protected PackedScene playerScene;
 
+	// Menu scene. Active when there is not a server connection.
+	[Export]
+	protected PackedScene menuScene;
+
+	[Export]
+	protected PackedScene activeScene; /// TESTING 
+
+	// Current scene loaded on the network, stored and sync to all clients as a ResourceID.
+	protected int networkSceneUID;
+
 	/*********************************************************************************************/
 	/** Engine Methods */
 
