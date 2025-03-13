@@ -12,12 +12,13 @@ playerScene = ExtResource("2_o8weq")
 clientListDebugLabel = NodePath("client_list")
 
 [node name="client_list" type="Label" parent="Lobby"]
-offset_top = 191.0
+offset_top = 250.0
 offset_right = 481.0
 offset_bottom = 323.0
 text = "Clients"
 
 [node name="LobbyMenu" parent="." node_paths=PackedStringArray("lobby") instance=ExtResource("2_n6048")]
+offset_top = 1.0
 offset_right = 481.0
-offset_bottom = 317.0
+offset_bottom = 318.0
 lobby = NodePath("../Lobby")

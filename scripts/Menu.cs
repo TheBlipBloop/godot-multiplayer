@@ -8,7 +8,13 @@ public partial class Menu : Control
 	protected Lobby lobby;
 
 	[Export]
-	protected TextEdit textEdit;
+	protected TextEdit passwordTextEdit;
+
+	[Export]
+	protected TextEdit ipTextEdit;
+
+	[Export]
+	protected string ip;
 
 	[Export]
 	protected string password;
@@ -16,7 +22,7 @@ public partial class Menu : Control
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		password = textEdit.Text;
+		password = passwordTextEdit.Text;
 		lobby.SetPassword(password);
 	}
 
@@ -25,7 +31,7 @@ public partial class Menu : Control
 
 	public void _on_host_button_down()
 	{
-		Error e = lobby.Host("127.0.0.1");
+		Error e = lobby.Host(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -34,7 +40,7 @@ public partial class Menu : Control
 
 	public void _on_join_button_down()
 	{
-		Error e = lobby.Connect("127.0.0.1");
+		Error e = lobby.Connect(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -44,12 +50,6 @@ public partial class Menu : Control
 	public void _on_exit_button_down()
 	{
 		Exit();
-	}
-
-	public void _on_password_text_changed()
-	{
-		password = textEdit.Text;
-		lobby.SetPassword(password);
 	}
 
 	public void _on_disconnect_button_down()
