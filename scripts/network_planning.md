@@ -93,6 +93,20 @@ Represents a single connected player in the lobby. Contains only game agnostic i
 	- Ping
 	- IsLocalPlayer()
 
+## Spawning players 
+- Every client has a player character node
+- All nodes need to be spawned across all instances BEFORE transfering authority to the client
+- So, 
+	SERVER : Registers client & syncs client lists
+	CLIENT : Updates client list (clients will need to be bound to their respective player nodes)
+	SERVER : Requests spawn
+	CLIENT : spawns player instances with correct authorities
+	SERVER ? Server sets authority of the player nodes
+	oh god this sucks
+
+	LETS MAKE IT THE CLIENTS PROBLEM!
+
+
 ## NetworkedNode
 Node that establishes a connection between Client and the Scene.
 ? I'm not sure how godot handles things but these are componenty?

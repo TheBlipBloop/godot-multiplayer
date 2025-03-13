@@ -39,6 +39,8 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
+	[ExportGroup("Lobby Configuration (Network)")]
+
 	// Mapping of unique ID's to client information.
 	protected Dictionary<int, Client> clients = new Dictionary<int, Client>();
 
@@ -59,29 +61,52 @@ public partial class Lobby : Node
 	protected string password = "";
 
 	// Time in seconds that server must receive authentication info from clients before kicking.
+	[Export]
 	protected float maxAuthenticationTime = 1.0f;
 
-	[Export]
-	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
+	[ExportGroup("Lobby Configuration (Scenes)")]
 
-	// TODO
+	// Node under which all player nodes will be spawn. This node should be a child of the Lobby 
+	// node.If no node is specified, the lobby node will be used instead. 
 	[Export]
-	protected SceneTree playerNode;
+	protected Node playerRoot;
 
+	// Player scene. Every client has one spawned player scene that they control.
 	[Export]
-	protected Label clientListDebugLabel;
+	protected PackedScene playerScene;
+
+	/*********************************************************************************************/
+	/** Engine Methods */
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
 		Multiplayer.MultiplayerPeer = null;
-		InitializeNetworkDelegates();
+		// ((SceneMultiplayer)MultiplayerApi).ServerRelay
 
+		InitializeNetworkDelegates();
 		SetLobbyInstance(this);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
+	{
+		ProcessDebugging();
+	}
+
+	/*********************************************************************************************/
+	/** Debugging - Data */
+
+	[Export]
+	protected Label clientListDebugLabel;
+
+	[Export]
+	protected Godot.Collections.Dictionary<int, Client> debug_clients = new Godot.Collections.Dictionary<int, Client>();
+
+	/*********************************************************************************************/
+	/** Debugging - Functions */
+
+	protected void ProcessDebugging()
 	{
 		debug_clients.Clear();
 		foreach (var item in clients.Keys)
@@ -92,7 +117,7 @@ public partial class Lobby : Node
 		clientListDebugLabel.Text = GetClientListString();
 	}
 
-	private string GetClientListString()
+	public string GetClientListString()
 	{
 		StringBuilder stringBuilder = new StringBuilder();
 		int clientIndex = 0;
@@ -108,7 +133,7 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
-	// Starts server -- no clients
+	// Starts server
 	public virtual Error Host(string bindIP)
 	{
 		if (Multiplayer.MultiplayerPeer != null)
@@ -127,6 +152,8 @@ public partial class Lobby : Node
 
 		Multiplayer.MultiplayerPeer = peer;
 		GD.Print(String.Format("Hosting server @ {0}:{1}.", bindIP, port));
+
+		// EnableUPNP(port);
 
 		return Error.Ok;
 	}
@@ -161,6 +188,7 @@ public partial class Lobby : Node
 		}
 
 		Multiplayer.MultiplayerPeer.Close();
+		// DisableUPNP(port);
 
 		return Error.Ok;
 	}
@@ -168,6 +196,23 @@ public partial class Lobby : Node
 	public virtual void SetPassword(string newPassword)
 	{
 		password = newPassword;
+	}
+
+	/*********************************************************************************************/
+	/** UPNP (WIP) */
+
+	private Upnp upnp;
+
+	protected void EnableUPNP(int port)
+	{
+		upnp = new Upnp();
+		upnp.Discover();
+		upnp.AddPortMapping(port);
+	}
+
+	protected void DisableUPNP(int port)
+	{
+		upnp.DeletePortMapping(port);
 	}
 
 	/*********************************************************************************************/
@@ -240,13 +285,22 @@ public partial class Lobby : Node
 	// Reset lobby completely (clears clients, disconnects peer, etc)
 	private void Reset()
 	{
+		// Generate list of all local clients.
+		int[] clientIDs = new int[clients.Count];
+		clients.Keys.CopyTo(clientIDs, 0);
+
+		// Unregister all local clients
+		for (int i = 0; i < clientIDs.Length; i++)
+		{
+			UnregisterLocalClient(clientIDs[i], ref clients);
+		}
 		Multiplayer.MultiplayerPeer = null;
 		clients.Clear();
 	}
 
 
 	/*********************************************************************************************/
-	/** Authentication */
+	/** Client Authentication */
 
 	protected virtual uint GetAuthenticationHash()
 	{
@@ -295,14 +349,13 @@ public partial class Lobby : Node
 	}
 
 	/*********************************************************************************************/
-	/** RPC */
+	/** RPC - Client => Server */
 
 	// Sent from clients to the server on initial connection
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void Command_AuthenticateNewClient(int clientID, uint clientAuth)
 	{
 		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to authenticate a client on remote.");
-
 
 		uint expectedAuthHash = GetAuthenticationHash();
 		bool clientAuthenticated = clientAuth == expectedAuthHash;
@@ -318,6 +371,9 @@ public partial class Lobby : Node
 		}
 	}
 
+	/*********************************************************************************************/
+	/** RPC - Server => Client*/
+
 	// Sends set of clients to all clients in the following format:
 	// [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -325,22 +381,50 @@ public partial class Lobby : Node
 	{
 		Debug.Assert(!Multiplayer.IsServer(), "Illegal network operation: Client sync recieved by server.");
 
-		clients.Clear();
-		for (int i = 0; i < clientData[0]; i++)
-		{
-			int networkId = clientData[i + 1];
-			Client client = new Client(networkId);
-
-			clients.Add(networkId, client);
-		}
+		UpdateClients(clientData);
 	}
 
-
 	/*********************************************************************************************/
-	/** Registrations */
+	/** Client Registration (server) */
+
+	protected void RegisterClient(int clientID)
+	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
+
+		if (clients.ContainsKey(clientID))
+		{
+			throw new Exception("Attempted to add client already in the client list. Client ID : " + clientID.ToString());
+		}
+
+		// Register client to list
+		RegisterLocalClient(clientID, ref clients);
+
+		// Sync info to remote peers
+		int[] data = SerializeClients(clients);
+		Rpc(MethodName.RPC_SyncClientList, data);
+	}
+
+	protected void UnregisterClient(int clientID)
+	{
+		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
+
+		if (!clients.ContainsKey(clientID))
+		{
+			throw new Exception("Attempted to remove client that is not in the client list. Client ID : " + clientID.ToString());
+		}
+
+		// Remove client from list
+		UnregisterLocalClient(clientID, ref clients);
+
+		// Sync info to remote peers
+		int[] data = SerializeClients(clients);
+		Rpc(MethodName.RPC_SyncClientList, data);
+	}
 
 	private int[] SerializeClients(Dictionary<int, Client> serialize)
 	{
+		// TODO : We might not need to send the first int as length of array, this is C# after all!
+
 		int count = serialize.Count;
 		int[] data = new int[count + 1];
 
@@ -355,36 +439,67 @@ public partial class Lobby : Node
 		return data;
 	}
 
-	protected void RegisterClient(int clientID)
-	{
-		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
 
-		if (clients.ContainsKey(clientID))
+	/*********************************************************************************************/
+	/** Client Registration (client) */
+
+	// [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
+	private void UpdateClients(int[] serverClientData)
+	{
+		int clientCount = serverClientData[0];
+		HashSet<int> remoteClientIDs = new HashSet<int>(clientCount);
+
+		for (int i = 1; i < clientCount + 1; i++)
 		{
-			throw new Exception("Attempted to add client already in the client list. Client ID : " + clientID.ToString());
+			int newClientID = serverClientData[i];
+			remoteClientIDs.Add(newClientID);
+
+			// If this client is not current in the local client list,
+			if (!clients.ContainsKey(newClientID))
+			{
+				// Add to local list
+				RegisterLocalClient(newClientID, ref clients);
+			}
 		}
 
-		Client newClient = new Client(clientID);
-		clients.Add(clientID, newClient);
+		// Generate list of all local clients.
+		int[] localClientIDs = new int[clients.Count];
+		clients.Keys.CopyTo(localClientIDs, 0);
 
-		// Sync client info
-		int[] data = SerializeClients(clients);
-		Rpc(MethodName.RPC_SyncClientList, data);
+		// Remove any local clients that have been removed from the servers list,
+		for (int i = 0; i < localClientIDs.Length; i++)
+		{
+			// If the client has been removed from the server list,
+			if (!remoteClientIDs.Contains(localClientIDs[i]))
+			{
+				// Remove the client from local list 
+				UnregisterLocalClient(localClientIDs[i], ref clients);
+			}
+		}
 	}
 
-	protected void UnregisterClient(int clientID)
+	protected virtual Client RegisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictionary)
 	{
-		Debug.Assert(Multiplayer.IsServer(), "Illegal network operation: Attempted to register a client on remote.");
+		Debug.Assert(!clientDictionary.ContainsKey(clientID), String.Format("Unable to register local client {0}. Client already exists.", clientID));
 
-		if (!clients.ContainsKey(clientID))
-		{
-			throw new Exception("Attempted to remove client that is not in the client list. Client ID : " + clientID.ToString());
-		}
+		Client newClient = new Client(clientID);
 
-		clients.Remove(clientID);
+		newClient.OnRegisterClient(GetClientRoot(), playerScene);
+		clientDictionary.Add(clientID, newClient);
 
-		// Sync client info
-		int[] data = SerializeClients(clients);
-		Rpc(MethodName.RPC_SyncClientList, data);
+		return newClient;
+	}
+
+	protected virtual bool UnregisterLocalClient(int clientID, ref Dictionary<int, Client> clientDictionary)
+	{
+		Debug.Assert(clientDictionary.ContainsKey(clientID), String.Format("Unable to unregister local client {0}. Client does not exist.", clientID));
+
+		clientDictionary[clientID].OnUnregisterClient();
+		return clientDictionary.Remove(clientID);
+	}
+
+	public Node GetClientRoot()
+	{
+		return playerRoot != null ? playerRoot : this;
 	}
 }
