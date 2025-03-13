@@ -5,27 +5,28 @@ WIP.
 
 
 # Roadmap (TODO)
-- [X] Server hosting.
-- [X] Client connection.
-- [X] Client authentication with version.
-- [X] Client authentication with password.
-- [X] Player spawning with client authority.
-- [X] Client authority movement / sync demo.
-- [ ] Launch server via CLI args in headless mode.
+- [X] Server hosting
+- [X] Client connection
+- [X] Client authentication with version
+- [X] Client authentication with password
+- [X] Player spawning with client authority
+- [X] Client authority movement / sync demo
+- [ ] Launch server via CLI args in headless mode
 - [ ] Custom [Server] and [Client] attributes with safety checks
-- [ ] Hybrid server-client hosting.
-- [ ] Track client latency.
-- [ ] Network time.
-- [ ] Demo with server authoritative movement + prediction / recon.
-- [ ] Methods for accessing client data from the lobby singleton.
-- [ ] Hosting / Connecting using UPNP.
-- [ ] Steam relay support.
-- [ ] Plug n play support for alternative (non ENET) multiplayer API's.
+- [ ] Hybrid server-client hosting
+- [ ] Track client latency
+- [ ] Network time
+- [ ] Demo with server authoritative movement + prediction / recon
+- [ ] Methods for accessing client data from the lobby singleton
+- [ ] Hosting / Connecting using UPNP
+- [ ] Steam relay support
+- [ ] Plug n play support for alternative (non ENET) multiplayer API's
 - [ ] Conform to Godot naming conventions!
 - [ ] Make sure lobby system plays nice with multi-scene setups
 - [ ] Player Spawn Point class? 
 - [ ] Cleanup client registration / registration code 
 - [ ] A better name for this project
+- [ ] Figure out how to turn this project into a plugin
 - [ ] Unit testing!!!!!
 
 
