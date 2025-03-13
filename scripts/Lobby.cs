@@ -48,6 +48,10 @@ public partial class Lobby : Node
 	[Export]
 	protected string version = "0.0.0";
 
+	// Default IP address used to bind hosted servers and to connect clients too.
+	[Export]
+	protected string ip = "192.168.0.1";
+
 	// Default port to use for creating / joining lobbies.
 	[Export]
 	protected int port = 7777;
@@ -143,9 +147,26 @@ public partial class Lobby : Node
 	/*********************************************************************************************/
 	/** Lobby */
 
-	// Starts server
-	public virtual Error Host(string bindIP)
+	public virtual Error StartServer()
 	{
+		return StartServer(ip, port, password);
+	}
+
+	public virtual Error StartServer(string bindIP)
+	{
+		return StartServer(bindIP, port);
+	}
+
+	public virtual Error StartServer(string bindIP, int portOverride)
+	{
+		return StartServer(bindIP, portOverride, password);
+	}
+
+	// Starts server
+	public virtual Error StartServer(string bindIP, int portOverride, string passwordOverride)
+	{
+		password = passwordOverride;
+
 		if (Multiplayer.MultiplayerPeer != null)
 		{
 			return Error.AlreadyExists;
@@ -163,12 +184,25 @@ public partial class Lobby : Node
 		Multiplayer.MultiplayerPeer = peer;
 		GD.Print(String.Format("Hosting server @ {0}:{1}.", bindIP, port));
 
-		// EnableUPNP(port);
-
 		return Error.Ok;
 	}
 
-	public virtual Error Connect(string address)
+	public virtual Error ConnectClient()
+	{
+		return ConnectClient(ip, port, password);
+	}
+
+	public virtual Error ConnectClient(string address)
+	{
+		return ConnectClient(address, port, password);
+	}
+
+	public virtual Error ConnectClient(string address, int portOverride)
+	{
+		return ConnectClient(address, portOverride, password);
+	}
+
+	public virtual Error ConnectClient(string address, int portOverride, string passwordOverride)
 	{
 		if (Multiplayer.MultiplayerPeer != null)
 		{
@@ -198,7 +232,6 @@ public partial class Lobby : Node
 		}
 
 		Multiplayer.MultiplayerPeer.Close();
-		// DisableUPNP(port);
 
 		return Error.Ok;
 	}
