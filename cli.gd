@@ -1,5 +1,5 @@
 #!/usr/bin/env -S godot -s
-extends SceneTree
+extends Node
 # https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html
 
 
@@ -7,8 +7,17 @@ class commands:
 	func test (bob: String, testy: int) -> void:
 		print(bob)
 		print(testy+1)
+	
+	func start_server(ip: String, password: String):
+		var lobby_scene: Lobby = preload("uid://cdjo6xqp3diue").instantiate() as Lobby
+		var lobby_instance = lobby_scene.GetLobbyInstance()
+		lobby_instance.SetPassword(password)
+		var error = lobby_instance.Host(ip)
+		if error != OK:
+			print(error_string( error))
 
-func _init():
+
+func _ready() -> void:
 	var c = commands.new()
 	var args: Dictionary = get_args()
 	for command in c.get_method_list():
@@ -17,7 +26,6 @@ func _init():
 			if resp != "":
 				print(resp)
 			break
-	quit()
 
 func call_method(c: commands, command: Dictionary, args: Dictionary) -> String:
 	var arg_num:int = c.get_method_argument_count(command["name"])
