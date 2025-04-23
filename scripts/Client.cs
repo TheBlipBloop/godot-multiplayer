@@ -1,83 +1,88 @@
 using Godot;
 using System;
 
-/// <summary>
-/// Clients are objects that represent an authenticated connection to the server.
-/// By default, each client spawns a player node which they have network authority over.
-/// </summary>
-[Serializable]
-public partial class Client : RefCounted, IBlittable
+namespace GodotNetworking
 {
-	/*********************************************************************************************/
-	/** Client Variables */
-
-	// Unique network ID for this client
-	[Export]
-	protected int networkID;
-
-	// Server time when this client was connected.
-	// TODO : Must have unified server time for this to make sense, which is silly but fun!
-	[Export]
-	protected float connectTime;
-
-	// Player node belonging to this client.
-	protected Node playerInstance;
-
-	/*********************************************************************************************/
-	/** Constructor */
-
-	public Client(int _networkID)
+	/// <summary>
+	/// Clients are objects that represent an authenticated connection to the server.
+	/// By default, each client spawns a player node which they have network authority over.
+	/// </summary>
+	[Serializable]
+	public partial class Client : RefCounted, IBlittable
 	{
-		networkID = _networkID;
-	}
+		/*********************************************************************************************/
+		/** Client Variables */
 
-	/*********************************************************************************************/
-	/** Client Registration */
+		// Unique network ID for this client
+		[Export]
+		protected int networkID;
 
-	public virtual void OnRegisterClient(Node root, PackedScene playerPrefab)
-	{
-		// Spawn in your player character, etc
-		playerInstance = playerPrefab.Instantiate<Node>();
-		playerInstance.SetMultiplayerAuthority(networkID);
+		// Server time when this client was connected.
+		// TODO : Must have unified server time for this to make sense, which is silly but fun!
+		[Export]
+		protected float connectTime;
 
-		playerInstance.Name = String.Format("client_{0}", networkID);
+		// Player node belonging to this client.
+		protected Node playerInstance;
 
-		root.AddChild(playerInstance);
-	}
+		/*********************************************************************************************/
+		/** Constructor */
 
-	public virtual void OnUnregisterClient()
-	{
-		// Destroy your player character, etc
-		playerInstance.QueueFree();
-	}
+		public Client(int _networkID)
+		{
+			networkID = _networkID;
+		}
 
-	/*********************************************************************************************/
-	/** Getters / Setters */
+		/*********************************************************************************************/
+		/** Client Registration */
 
-	public int GetNetworkID()
-	{
-		return networkID;
-	}
+		public virtual void OnRegisterClient(Node root, PackedScene playerPrefab)
+		{
+			// Spawn in your player character, etc
+			playerInstance = playerPrefab.Instantiate<Node>();
+			playerInstance.SetMultiplayerAuthority(networkID);
 
-	public Node GetPlayer()
-	{
-		return playerInstance;
-	}
+			playerInstance.Name = String.Format("client_{0}", networkID);
 
-	/*********************************************************************************************/
-	/** Blittable */
+			root.AddChild(playerInstance);
+		}
 
-	public Object[] ToBlittable()
-	{
-		Object[] objects = new Object[2];
+		public virtual void OnUnregisterClient()
+		{
+			// Destroy your player character, etc
+			playerInstance.QueueFree();
+		}
 
-		objects[1] = networkID;
+		/*********************************************************************************************/
+		/** Getters / Setters */
 
-		return objects;
-	}
+		public int GetNetworkID()
+		{
+			return networkID;
+		}
 
-	public Object fromBlittable(Object[] data)
-	{
-		return new Client(networkID);
+		public Node GetPlayer()
+		{
+			return playerInstance;
+		}
+
+		/*********************************************************************************************/
+		/** Blittable */
+
+		// NOTE : Not currently used. Will likely be in the future
+
+		public Object[] ToBlittable()
+		{
+			Object[] objects = new Object[2];
+
+			objects[1] = networkID;
+
+			return objects;
+		}
+
+		public Object fromBlittable(Object[] data)
+		{
+			return new Client(networkID);
+		}
 	}
 }

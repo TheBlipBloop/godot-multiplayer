@@ -17,7 +17,6 @@ offset_right = 481.0
 offset_bottom = 323.0
 text = "Clients"
 
-[node name="LobbyMenu" parent="." node_paths=PackedStringArray("lobby") instance=ExtResource("2_n6048")]
+[node name="LobbyMenu" parent="." instance=ExtResource("2_n6048")]
 offset_right = 481.0
 offset_bottom = 317.0
-lobby = NodePath("../Lobby")

@@ -6,7 +6,7 @@ namespace GodotNetworking
 	/// <summary>
 	/// Parses command line arguments for the networking system
 	/// </summary>
-	public class CLIHandler
+	public static class CLIHandler
 	{
 		private const string ARG_START_SERVER = "server";
 
@@ -14,7 +14,7 @@ namespace GodotNetworking
 
 		private const string ARG_PORT_OVERRIDE = "port=";
 
-		public void ProcessCommandLineArguments(string[] args)
+		public static void ProcessCommandLineArguments(string[] args)
 		{
 			int port = Lobby.GetLobbyInstance().GetPort();
 
@@ -26,13 +26,14 @@ namespace GodotNetworking
 			}
 		}
 
-		private void StartServer(int port)
+		private static void StartServer(int port)
 		{
 			Lobby lobby = Lobby.GetLobbyInstance();
-			lobby.Host()
+			// lobby.Host()
+			// TODO 
 		}
 
-		private bool HasArgument(string[] args, string query)
+		private static bool HasArgument(string[] args, string query)
 		{
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -46,7 +47,7 @@ namespace GodotNetworking
 		}
 
 
-		private bool ParseArgumentInt(string[] args, string query, out int value)
+		private static bool ParseArgumentInt(string[] args, string query, out int value)
 		{
 			for (int i = 0; i < args.Length; i++)
 			{
