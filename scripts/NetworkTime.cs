@@ -3,33 +3,9 @@ using System;
 
 // TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
 // TODO : Smoothed pings (k running avg maybe temporially weighted)
-// TODO : Modular archecture for the NetworkManager class? I feel this should not be its own node
+// TODO : Modular architecture for the NetworkManager class? I feel this should not be its own node
 // TODO : Documentation
-
-public struct NetworkTimeSync
-{
-	private float currentNetworkTime;
-
-	private float currentLocalTime;
-
-	private float localToServerOffset; 
-
-	public NetworkTimeSync(float _currentNetworkTime, float _currentLocalTime)
-	{
-		currentNetworkTime = _currentNetworkTime;
-		currentLocalTime = _currentLocalTime;
-
-		localToServerOffset = currentNetworkTime - currentLocalTime;
-	}
-
-	public float GetLocalToServerOffset()
-	{
-		return localToServerOffset;
-	}
-}
-
-// TODO : Track latency
-// TODO : The network time sync should be activate by the lobby 
+// TODO : ? It could be interesting to use integer milliseconds for our running averages -- would be more stable than fpo
 
 /// <summary>
 /// Node responsible for tracking network time across clients / server
@@ -44,15 +20,18 @@ public partial class NetworkTime : Node
 
 	private float nextSyncTime = 0;
 
-	private NetworkTimeSync latestNetworkTime = new NetworkTimeSync();
+	private float localToServerTimeOffset;
 
 	// Round trip time from client to server in seconds
 	protected float ping;
 
 	protected float smoothedPing;
+
 	protected float cumPing;
 
-	private int smoothedPingSamples;
+	private int sumPingMS;
+
+	// private int smoothedPingSamples;
 
 	private float localPingTime;
 
@@ -97,14 +76,13 @@ public partial class NetworkTime : Node
 	protected void SyncNetworkTime()
 	{
 		float a = GetLocalTime();
-		Lag();
 		Rpc(MethodName.RPC_SyncNetworkTime, a);
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void RPC_SyncNetworkTime(float newNetworkTime)
 	{
-		latestNetworkTime = new NetworkTimeSync(newNetworkTime, GetLocalTime());
+		localToServerTimeOffset = newNetworkTime - GetLocalTime();
 	}
 
 	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
@@ -122,18 +100,10 @@ public partial class NetworkTime : Node
 		GD.Print("S:" + (1000f * smoothedPing).ToString());
 	}
 
-	private void Lag()
-	{
-		// horrid lag sim
-		// for(int i  = 0; i < 100000000; i++)
-		// {
-		// 	continue;
-		// }
-	}
-
 	public float GetNetworkTime()
 	{
-		return GetLocalTime() + latestNetworkTime.GetLocalToServerOffset() + (0.5f * smoothedPing);
+		float delayFromServer = smoothedPing / 2f;
+		return GetLocalTime() + localToServerTimeOffset + delayFromServer;
 	}
 
 	public float GetLocalTime()
@@ -144,11 +114,9 @@ public partial class NetworkTime : Node
 	/*********************************************************************************************/
 	/** Client */
 
-
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void Command_Ping()
 	{
-		Lag();
 		GD.Print("Ping");
 		int clientId = Multiplayer.GetRemoteSenderId();
 		RpcId(clientId, MethodName.RPC_Pong);
