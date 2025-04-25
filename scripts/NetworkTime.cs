@@ -1,134 +1,207 @@
 using Godot;
-using System;
 
-// TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
-// TODO : Smoothed pings (k running avg maybe temporially weighted)
 // TODO : Modular architecture for the NetworkManager class? I feel this should not be its own node
 // TODO : Documentation
-// TODO : ? It could be interesting to use integer milliseconds for our running averages -- would be more stable than fpo
+//
+// TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
+// TODO : Randomize ping / sync frequencies
+// TODO : Gaussian convolutions for ping lowpass
 
 /// <summary>
 /// Node responsible for tracking network time across clients / server
 /// </summary>
 public partial class NetworkTime : Node
 {
-	/*********************************************************************************************/
-	/** Network Time */
+    /*********************************************************************************************/
+    /** Network Time */
 
-	[Export]
-	protected float syncFrequency = 5f;
+    [Export]
+    protected float syncFrequency = 1f;
 
-	private float nextSyncTime = 0;
+    private float nextSyncTime = 0;
 
-	private float localToServerTimeOffset;
+    private float localToServerTimeOffset;
 
-	// Round trip time from client to server in seconds
-	protected float ping;
+    // Copy of network time exported for debugging purposes.
+    [Export]
+    private float debug_NetworkTime;
 
-	protected float smoothedPing;
+    [Export]
+    private Label debug_timeLabel;
 
-	protected float cumPing;
+    /*********************************************************************************************/
+    /** Ping */
 
-	private int sumPingMS;
+    // Number of past ping samples to reference when smoothing ping.
+    const int PING_SMOOTHING_SAMPLES = 6;
 
-	// private int smoothedPingSamples;
+    // Round trip time from client to server in seconds
+    protected float ping;
 
-	private float localPingTime;
+    // Round trip time smoothed using an average of the last @PING_SMOOTHING_SAMPLES samples.
+    protected float smoothedPing;
 
-	// Copy of network time exported for debugging purposes.
-	[Export]
-	private float debug_NetworkTime;
+    // Circular array of recent ping samples. Used when calculating @smoothedPing.
+    private float[] pingSamples = new float[PING_SMOOTHING_SAMPLES];
 
-	[Export]
-	private Label debug_timeLabel;
+    private int nextSampleIndex = 0;
 
-	/*********************************************************************************************/
-	/** Engine Methods */
+    private float localPingTime;
 
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-	}
+    /*********************************************************************************************/
+    /** Engine Methods */
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
-		if (Multiplayer.HasMultiplayerPeer() && !Multiplayer.IsServer() && GetLocalTime() > nextSyncTime)
-		{
-			localPingTime = GetLocalTime();
-			RpcId(1, MethodName.Command_Ping);
-			nextSyncTime = GetLocalTime() + 1f / syncFrequency;
-		}
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready() { }
 
-		if (Multiplayer.HasMultiplayerPeer() && Multiplayer.IsServer() && GetLocalTime() > nextSyncTime)
-		{
-			GD.Print("Syncing time from server");
-			SyncNetworkTime();
-			nextSyncTime = GetLocalTime() + 1f / syncFrequency;
-		}
+    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    public override void _Process(double delta)
+    {
+        if (
+            !Multiplayer.HasMultiplayerPeer()
+            || Multiplayer.MultiplayerPeer.GetConnectionStatus()
+                != MultiplayerPeer.ConnectionStatus.Connected
+        )
+        {
+            return;
+        }
 
-		ProcessDebugging();
-	}
+        if (
+            Multiplayer.HasMultiplayerPeer()
+            && !Multiplayer.IsServer()
+            && GetLocalTime() > nextSyncTime
+        )
+        {
+            localPingTime = GetLocalTime();
+            RpcId(1, MethodName.Command_Ping);
+            nextSyncTime = GetLocalTime() + 1f / syncFrequency;
+        }
 
-	/*********************************************************************************************/
-	/** Server */
+        if (
+            Multiplayer.HasMultiplayerPeer()
+            && Multiplayer.IsServer()
+            && GetLocalTime() > nextSyncTime
+        )
+        {
+            GD.Print("Syncing time from server");
+            SyncNetworkTime();
+            nextSyncTime = GetLocalTime() + 1f / syncFrequency;
+        }
 
-	protected void SyncNetworkTime()
-	{
-		float a = GetLocalTime();
-		Rpc(MethodName.RPC_SyncNetworkTime, a);
-	}
+        ProcessDebugging();
+    }
 
-	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void RPC_SyncNetworkTime(float newNetworkTime)
-	{
-		localToServerTimeOffset = newNetworkTime - GetLocalTime();
-	}
+    /*********************************************************************************************/
+    /** Time */
 
-	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void RPC_Pong()
-	{
-		ping = GetLocalTime() - localPingTime;
-		cumPing += ping;
-		smoothedPingSamples++;
-		
-		smoothedPing = cumPing / smoothedPingSamples;
+    protected void SyncNetworkTime()
+    {
+        this.EnsureServer();
 
-		float pingMs = 1000f * ping;
+        Rpc(MethodName.RPC_SyncNetworkTime, GetLocalTime());
+    }
 
-		GD.Print("P:" + pingMs.ToString());
-		GD.Print("S:" + (1000f * smoothedPing).ToString());
-	}
+    public float GetNetworkTime()
+    {
+        if (Multiplayer.MultiplayerPeer != null && Multiplayer.IsServer())
+        {
+            return GetLocalTime();
+        }
+        else
+        {
+            float delayFromServer = smoothedPing / 2f;
+            return GetLocalTime() + localToServerTimeOffset + delayFromServer;
+        }
+    }
 
-	public float GetNetworkTime()
-	{
-		float delayFromServer = smoothedPing / 2f;
-		return GetLocalTime() + localToServerTimeOffset + delayFromServer;
-	}
+    public float GetLocalTime()
+    {
+        return (float)Time.GetTicksMsec() / 1000f;
+    }
 
-	public float GetLocalTime()
-	{
-		return (float)Time.GetTicksMsec() / 1000f;
-	}
+    /*********************************************************************************************/
+    /** Ping */
 
-	/*********************************************************************************************/
-	/** Client */
+    protected void ResetPingSamples()
+    {
+        for (int i = 0; i < pingSamples.Length; i++)
+        {
+            pingSamples[i] = 0;
+        }
+    }
 
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void Command_Ping()
-	{
-		GD.Print("Ping");
-		int clientId = Multiplayer.GetRemoteSenderId();
-		RpcId(clientId, MethodName.RPC_Pong);
-	}
-	
+    protected void RecordPingSample(float newPingSample)
+    {
+        pingSamples[nextSampleIndex++ % PING_SMOOTHING_SAMPLES] = newPingSample;
+    }
 
-	/*********************************************************************************************/
-	/** Debugging */
+    protected float AveragePingSamples()
+    {
+        float sum = 0f;
+        float count = 0f;
+        for (int i = 0; i < pingSamples.Length; i++)
+        {
+            sum += pingSamples[i];
+            if (pingSamples[i] > 0f)
+            {
+                count++;
+            }
+        }
+        return sum / count;
+    }
 
-	private void ProcessDebugging()
-	{
-		debug_NetworkTime = GetNetworkTime();
-		debug_timeLabel.Text = GetNetworkTime().ToString();
-	}
+    /*********************************************************************************************/
+    /** Server */
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
+    )]
+    private void RPC_SyncNetworkTime(float newNetworkTime)
+    {
+        localToServerTimeOffset = newNetworkTime - GetLocalTime();
+    }
+
+    [Rpc(
+        MultiplayerApi.RpcMode.Authority,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
+    )]
+    private void RPC_Pong()
+    {
+        ping = GetLocalTime() - localPingTime;
+
+        RecordPingSample(ping);
+        smoothedPing = AveragePingSamples();
+
+        float pingMs = 1000f * ping;
+
+        GD.Print("P:" + pingMs.ToString());
+        GD.Print("S:" + (1000f * smoothedPing).ToString());
+    }
+
+    /*********************************************************************************************/
+    /** Client */
+
+    [Rpc(
+        MultiplayerApi.RpcMode.AnyPeer,
+        CallLocal = false,
+        TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered
+    )]
+    private void Command_Ping()
+    {
+        GD.Print("Ping");
+        int clientId = Multiplayer.GetRemoteSenderId();
+        RpcId(clientId, MethodName.RPC_Pong);
+    }
+
+    /*********************************************************************************************/
+    /** Debugging */
+
+    private void ProcessDebugging()
+    {
+        debug_NetworkTime = GetNetworkTime();
+        debug_timeLabel.Text = GetNetworkTime().ToString();
+    }
 }
