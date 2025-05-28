@@ -2,10 +2,10 @@ using Godot;
 
 // TODO : Modular architecture for the NetworkManager class? I feel this should not be its own node
 // TODO : Documentation
+// TODO : Godot C# standards
 //
 // TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
 // TODO : Randomize ping / sync frequencies
-// TODO : Gaussian convolutions for ping lowpass
 
 /// <summary>
 /// Node responsible for tracking network time across clients / server
@@ -32,8 +32,19 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Ping */
 
-    // Number of past ping samples to reference when smoothing ping.
+    // Number of past ping samples to reference when calcualting smoothed ping.
     const int PING_SMOOTHING_SAMPLES = 6;
+
+    // Weights applied to ping samples (chronologically). Will be normalized to sum to 1.0 at runtime.
+    readonly float[] PING_SMOOTHING_WEIGHTS = new float[]
+    {
+        0.35f,
+        0.25f,
+        0.20f,
+        0.1f,
+        0.05f,
+        0.05f,
+    };
 
     // Round trip time from client to server in seconds
     protected float ping;
@@ -52,7 +63,10 @@ public partial class NetworkTime : Node
     /** Engine Methods */
 
     // Called when the node enters the scene tree for the first time.
-    public override void _Ready() { }
+    public override void _Ready()
+    {
+        ResetPingSamples();
+    }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _Process(double delta)
@@ -132,22 +146,48 @@ public partial class NetworkTime : Node
 
     protected void RecordPingSample(float newPingSample)
     {
-        pingSamples[nextSampleIndex++ % PING_SMOOTHING_SAMPLES] = newPingSample;
+        pingSamples[nextSampleIndex] = newPingSample;
+        nextSampleIndex = (nextSampleIndex + 1) % PING_SMOOTHING_SAMPLES;
     }
 
     protected float AveragePingSamples()
     {
+        // TODO : Clean up
         float sum = 0f;
-        float count = 0f;
-        for (int i = 0; i < pingSamples.Length; i++)
+        float sumWeight = 0f;
+
+        int index = nextSampleIndex - 1;
+        if (index < 0)
         {
-            sum += pingSamples[i];
-            if (pingSamples[i] > 0f)
-            {
-                count++;
-            }
+            index = PING_SMOOTHING_SAMPLES - 1;
         }
-        return sum / count;
+
+        int temporalDistance = 0;
+
+        while (temporalDistance != pingSamples.Length)
+        {
+            float weight = PING_SMOOTHING_WEIGHTS[temporalDistance];
+
+            string output =
+                weight.ToString() + " * " + (pingSamples[index] * 1000).ToString() + "ms";
+            GD.Print(output);
+
+            sum += pingSamples[index] * weight;
+            if (pingSamples[index] > 0)
+            {
+                sumWeight += weight;
+            }
+
+            // Wrap around!
+            index = index - 1;
+            if (index < 0)
+            {
+                index = pingSamples.Length - 1;
+            }
+            temporalDistance += 1;
+        }
+
+        return sum / sumWeight;
     }
 
     /*********************************************************************************************/
