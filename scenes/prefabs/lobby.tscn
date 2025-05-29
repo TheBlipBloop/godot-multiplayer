@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://cdjo6xqp3diue"]
+[gd_scene load_steps=4 format=3 uid="uid://cdjo6xqp3diue"]
 
 [ext_resource type="Script" uid="uid://dcm5jeu2yntyw" path="res://scripts/Lobby.cs" id="1_uniae"]
 [ext_resource type="PackedScene" uid="uid://bpo3sey3ddxkt" path="res://scenes/prefabs/demo_player.tscn" id="2_sslvx"]
+[ext_resource type="Script" uid="uid://d1ee3nga55dog" path="res://scripts/NetworkTime.cs" id="3_sslvx"]
 
 [node name="Lobby" type="Node" node_paths=PackedStringArray("clientListDebugLabel")]
 script = ExtResource("1_uniae")
@@ -13,3 +14,6 @@ offset_top = 250.0
 offset_right = 481.0
 offset_bottom = 323.0
 text = "Clients"
+
+[node name="NetworkTime" type="Node" parent="."]
+script = ExtResource("3_sslvx")

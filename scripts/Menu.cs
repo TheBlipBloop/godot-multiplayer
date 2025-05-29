@@ -37,8 +37,7 @@ public partial class Menu : CanvasLayer
 
 	public void _on_host_button_down()
 	{
-		LobbyInstance.SetPassword(password);
-		Error e = LobbyInstance.Host(ip);
+		Error e = Lobby.GetLobbyInstance().StartServer(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
@@ -47,8 +46,7 @@ public partial class Menu : CanvasLayer
 
 	public void _on_join_button_down()
 	{
-		LobbyInstance.SetPassword(password);
-		Error e = LobbyInstance.Connect(ip);
+		Error e = Lobby.GetLobbyInstance().ConnectClient(ipTextEdit.Text);
 		if (e != Error.Ok)
 		{
 			GD.Print(e.ToString());
