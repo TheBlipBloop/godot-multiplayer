@@ -1,9 +1,6 @@
 using Godot;
 
-// TODO : Modular architecture for the NetworkManager class? I feel this should not be its own node
 // TODO : Documentation
-// TODO : Godot C# standards
-//
 // TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
 // TODO : Randomize ping / sync frequencies
 
@@ -85,6 +82,7 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Time */
 
+    // Returns the current time in seconds. Synchronised with the server.
     public float GetNetworkTime()
     {
         if (Multiplayer.MultiplayerPeer != null && Multiplayer.IsServer())
@@ -98,6 +96,7 @@ public partial class NetworkTime : Node
         }
     }
 
+    // Returns the current LOCAL time in seconds. Not synced on the network.
     public float GetLocalTime()
     {
         return (float)Time.GetTicksMsec() / 1000f;
