@@ -1,6 +1,5 @@
 using Godot;
 
-// TODO : Documentation
 // TODO : Investigate the effect of join time (and by extension relative placement of pings and time syncs)
 // TODO : Randomize ping / sync frequencies
 
@@ -17,8 +16,10 @@ public partial class NetworkTime : Node
     [Export]
     protected float PingAndSyncFrequency = 1f;
 
+    // Next local time that will trigger a ping/sync.
     private float _nextSyncTime = 0;
 
+    // Time difference between local clock and server clock (seconds).
     private float _localToServerTimeOffset;
 
     /*********************************************************************************************/
@@ -48,6 +49,7 @@ public partial class NetworkTime : Node
     // Round trip time smoothed using an average of the last @PING_SMOOTHING_SAMPLES samples.
     protected float _smoothedPing = 0f;
 
+    // Time when ping command was sent to the server from this local client.
     private float _localPingTime = 0f;
 
     /*********************************************************************************************/
@@ -82,7 +84,10 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Time */
 
-    // Returns the current time in seconds. Synchronised with the server.
+    /// <summary>
+    /// Returns the current network time in seconds. This value should be within +-10ms of the servers
+    /// network time for all clients.
+    /// </summary>
     public float GetNetworkTime()
     {
         if (Multiplayer.MultiplayerPeer != null && Multiplayer.IsServer())
@@ -91,12 +96,14 @@ public partial class NetworkTime : Node
         }
         else
         {
-            float delayFromServer = _smoothedPing / 2f;
+            float delayFromServer = GetPingSmoothed() / 2f;
             return GetLocalTime() + _localToServerTimeOffset + delayFromServer;
         }
     }
 
-    // Returns the current LOCAL time in seconds. Not synced on the network.
+    /// <summary>
+    /// Returns the current LOCAL time in seconds. Not synced to the network.
+    /// </summary>
     public float GetLocalTime()
     {
         return (float)Time.GetTicksMsec() / 1000f;
@@ -105,6 +112,9 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Ping */
 
+    /// <summary>
+    /// Resets all ping samples as recorded in @_pingSamples.
+    /// </summary>
     protected void ResetPingSamples()
     {
         for (int i = 0; i < _pingSamples.Length; i++)
@@ -113,12 +123,21 @@ public partial class NetworkTime : Node
         }
     }
 
+    /// <summary>
+    /// Records a new ping sample to circular array @_pingSamples.
+    /// </summary>
+    /// <param name="newPingSample">A new ping sample to record (seconds).</param>
     protected void RecordPingSample(float newPingSample)
     {
         _pingSamples[_nextSampleIndex] = newPingSample;
         _nextSampleIndex = (_nextSampleIndex + 1) % PING_SMOOTHING_SAMPLES;
     }
 
+    /// <summary>
+    /// Calculates a smoothed average ping using the last @PING_SMOOTHING_SAMPLES ping samples.
+    /// Weights are determined by the constant @PING_SMOOTHING_WEIGHTS.
+    /// </summary>
+    /// <returns>A smoothed average ping sample (in seconds).</returns>
     protected float AveragePingSamples()
     {
         float sum = 0f;
@@ -133,8 +152,8 @@ public partial class NetworkTime : Node
         int temporalDistance = 0;
 
         // Calculate a weighted average where the most recently recorded ping is
-        // scaled by the first index of PING_SMOOTHING_SAMPLES, second most recent
-        // by second index of PING_SMOOTHING_SAMPLES, etc.
+        // scaled by the first index of PING_SMOOTHING_WEIGHTS, second most recent
+        // by second index of PING_SMOOTHING_WEIGHTS, etc.
         while (temporalDistance != _pingSamples.Length)
         {
             float samplePing = _pingSamples[index];
@@ -159,13 +178,17 @@ public partial class NetworkTime : Node
         return sum / totalWeight;
     }
 
-    // Returns the most recent successful RTT. Seconds.
+    /// <summary>
+    /// Returns the most recent successful RTT (in seconds).
+    /// </summary>
     public float GetPing()
     {
         return _ping;
     }
 
-    // Returns a weighted average of recent pings. Seconds.
+    /// <summary>
+    /// Returns a weighted average of recent pings (in seconds).
+    /// </summary>
     public float GetPingSmoothed()
     {
         return _smoothedPing;
@@ -174,6 +197,10 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Server */
 
+    /// <summary>
+    /// Server => Client.
+    /// Response to ping on the server. Updates client network time and ping statistics.
+    /// </summary>
     [Rpc(
         MultiplayerApi.RpcMode.Authority,
         CallLocal = false,
@@ -196,6 +223,10 @@ public partial class NetworkTime : Node
     /*********************************************************************************************/
     /** Client */
 
+    /// <summary>
+    /// Client => Server.
+    /// Submit a ping to the server. Will be answered by a Pong (see @RPC_Pong).
+    /// </summary>
     [Rpc(
         MultiplayerApi.RpcMode.AnyPeer,
         CallLocal = false,
