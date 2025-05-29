@@ -1,25 +1,35 @@
 using Godot;
 using System;
 
-public partial class Menu : Control
+public partial class Menu : CanvasLayer
 {
-	[Export]
-	protected TextEdit passwordTextEdit;
+	protected LineEdit passwordInput = null;
 
-	[Export]
-	protected TextEdit ipTextEdit;
+	protected LineEdit ipInput = null;
 
-	[Export]
-	protected string ip;
+    private String ip {
+        get {
+            return ipInput.Text;
+        }
+    }
 
-	[Export]
-	protected string password;
+    private String password {
+        get {
+            return passwordInput.Text;
+        }
+    }
+
+    protected Lobby LobbyInstance  {
+        get {
+            return Lobby.GetLobbyInstance();
+        }
+    }
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		password = passwordTextEdit.Text;
-		Lobby.GetLobbyInstance().SetPassword(password);
+        passwordInput = GetNode<LineEdit>("%password");
+        ipInput = GetNode<LineEdit>("%ip");
 	}
 
 	/*********************************************************************************************/
@@ -50,7 +60,7 @@ public partial class Menu : Control
 
 	public void _on_disconnect_button_down()
 	{
-		Lobby.GetLobbyInstance().Disconnect();
+		LobbyInstance.Disconnect();
 	}
 
 	/*********************************************************************************************/
