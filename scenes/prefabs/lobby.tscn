@@ -6,6 +6,7 @@
 
 [node name="Lobby" type="Node" node_paths=PackedStringArray("clientListDebugLabel")]
 script = ExtResource("1_uniae")
+maxAuthenticationTime = 5.0
 playerScene = ExtResource("2_sslvx")
 clientListDebugLabel = NodePath("client_list")
 
@@ -15,5 +16,5 @@ offset_right = 481.0
 offset_bottom = 323.0
 text = "Clients"
 
-[node name="NetworkTime" type="Node" parent="."]
+[node name="Node" type="Node" parent="."]
 script = ExtResource("3_sslvx")
