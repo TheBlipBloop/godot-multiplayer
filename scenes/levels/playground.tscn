@@ -5,6 +5,3 @@
 [node name="playground" type="Node2D"]
 
 [node name="LobbyMenu" parent="." instance=ExtResource("2_n6048")]
-offset_top = 1.0
-offset_right = 481.0
-offset_bottom = 318.0
