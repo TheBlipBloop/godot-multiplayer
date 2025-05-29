@@ -23,7 +23,7 @@ public static class NetworkExtensions
 #endif
     }
 
-    // Throws an error if this node is not running on the server.
+    // Throws an error if this node is not running as a client connected to a server.
     public static void EnsureClient(this Node node)
     {
 #if DEBUG_NETWORKING

@@ -26,5 +26,4 @@ text = "Clients"
 
 [node name="NetworkTime" type="Node" parent="." node_paths=PackedStringArray("debug_timeLabel")]
 script = ExtResource("3_sslvx")
-syncFrequency = 0.25
 debug_timeLabel = NodePath("../network_time")
