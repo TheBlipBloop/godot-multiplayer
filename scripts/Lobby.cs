@@ -527,34 +527,21 @@ public partial class Lobby : Node
 
     private int[] SerializeClients(Dictionary<int, Client> serialize)
     {
-        // TODO : We might not need to send the first int as length of array, this is C# after all!
-
-        int count = serialize.Count;
-        int[] data = new int[count + 1];
-
-        int[] keys = serialize.Keys.ToArray<int>();
-
-        data[0] = count;
-        for (int i = 0; i < keys.Length; i++)
-        {
-            data[i + 1] = keys[i];
-        }
-
-        return data;
+        int[] clientIDs = serialize.Keys.ToArray<int>();
+        return clientIDs;
     }
 
     /*********************************************************************************************/
     /** Client Registration (client) */
 
-    // [N, CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
-    private void UpdateClients(int[] serverClientData)
+    // [CLIENT_0_ID, CLIENT_1_ID, ... CLIENT_N_ID]
+    private void UpdateClients(int[] serverClientIDs)
     {
-        int clientCount = serverClientData[0];
-        HashSet<int> remoteClientIDs = new HashSet<int>(clientCount);
+        HashSet<int> remoteClientIDs = new HashSet<int>(serverClientIDs.Length);
 
-        for (int i = 1; i < clientCount + 1; i++)
+        for (int i = 0; i < serverClientIDs.Length; i++)
         {
-            int newClientID = serverClientData[i];
+            int newClientID = serverClientIDs[i];
             remoteClientIDs.Add(newClientID);
 
             // If this client is not current in the local client list,
