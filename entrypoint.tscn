@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqo2pphhioknn"]
+
+[ext_resource type="Script" uid="uid://dxtqpjmthpr4w" path="res://Entrypoint.cs" id="1_r3k1k"]
+
+[node name="Entrypoint" type="Node2D"]
+script = ExtResource("1_r3k1k")
